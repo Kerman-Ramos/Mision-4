@@ -1,128 +1,128 @@
 {
-  "marcas": [
-    {
-      "id": 1,
-      "nombre": "Toyota",
-      "paisOrigen": "Japón",
-      "anioFundacion": 1937,
-      "sede": "Toyota City",
-      "activa": true
-    },
-    {
-      "id": 2,
-      "nombre": "SEAT",
-      "paisOrigen": "España",
-      "anioFundacion": 1950,
-      "sede": "Martorell",
-      "activa": true
-    },
-    {
-      "id": 3,
-      "nombre": "Ford",
-      "paisOrigen": "Estados Unidos",
-      "anioFundacion": 1903,
-      "sede": "Dearborn",
-      "activa": true
-    },
-    {
-      "id": 4,
-      "nombre": "Volkswagen",
-      "paisOrigen": "Alemania",
-      "anioFundacion": 1937,
-      "sede": "Wolfsburgo",
-      "activa": true
-    }
-  ],
-  "coches": [
-    {
-      "id": 1,
-      "marcaId": 1,
-      "modelo": "Corolla",
-      "anio": 2022,
-      "combustible": "Híbrido",
-      "precio": 26500
-    },
-    {
-      "id": 2,
-      "marcaId": 2,
-      "modelo": "León",
-      "anio": 2021,
-      "combustible": "Gasolina",
-      "precio": 21900
-    },
-    {
-      "id": 3,
-      "marcaId": 3,
-      "modelo": "Focus",
-      "anio": 2019,
-      "combustible": "Diésel",
-      "precio": 15800
-    },
-    {
-      "id": 4,
-      "marcaId": 4,
-      "modelo": "ID.3",
-      "anio": 2023,
-      "combustible": "Eléctrico",
-      "precio": 34900
-    },
-    {
-      "id": 5,
-      "marcaId": 2,
-      "modelo": "Ibiza",
-      "anio": 2020,
-      "combustible": "Gasolina",
-      "precio": 14200
-    },
-    {
-      "id": 6,
-      "marcaId": 1,
-      "modelo": "Yaris",
-      "anio": 2024,
-      "combustible": "Híbrido",
-      "precio": 23100
-    }
-  ],
-  "propietarios": [
-    {
-      "id": 1,
-      "nombre": "Laura Martínez",
-      "email": "laura.martinez@example.com",
-      "ciudad": "Madrid",
-      "cocheId": 1,
-      "fechaCompra": "2022-03-15"
-    },
-    {
-      "id": 2,
-      "nombre": "Carlos Gómez",
-      "email": "carlos.gomez@example.com",
-      "ciudad": "Barcelona",
-      "cocheId": 2,
-      "fechaCompra": "2021-09-02"
-    },
-    {
-      "id": 3,
-      "nombre": "Ana Ruiz",
-      "email": "ana.ruiz@example.com",
-      "ciudad": "Valencia",
-      "cocheId": 4,
-      "fechaCompra": "2023-06-20"
-    },
-    {
-      "id": 4,
-      "nombre": "Javier Sánchez",
-      "email": "javier.sanchez@example.com",
-      "ciudad": "Sevilla",
-      "cocheId": 3,
-      "fechaCompra": "2019-11-08"
-    },
-    {
-      "id": 5,
-      "nombre": "Marta López",
-      "email": "marta.lopez@example.com",
-      "ciudad": "Bilbao",
-      "cocheId": 6,
-      "fechaCompra": "2024-02-27"
-    }
-  ]
+	"marcas": [
+		{
+			"id": 1,
+			"nombre": "Toyota",
+			"paisOrigen": "Japón",
+			"anioFundacion": 1937,
+			"sede": "Toyota City",
+			"activa": true
+		},
+		{
+			"id": 2,
+			"nombre": "SEAT",
+			"paisOrigen": "España",
+			"anioFundacion": 1950,
+			"sede": "Martorell",
+			"activa": true
+		},
+		{
+			"id": 3,
+			"nombre": "Ford",
+			"paisOrigen": "Estados Unidos",
+			"anioFundacion": 1903,
+			"sede": "Dearborn",
+			"activa": true
+		},
+		{
+			"id": 4,
+			"nombre": "Volkswagen",
+			"paisOrigen": "Alemania",
+			"anioFundacion": 1937,
+			"sede": "Wolfsburgo",
+			"activa": true
+		}
+	],
+	"coches": [
+		{
+			"id": 1,
+			"marcaId": 1,
+			"modelo": "Corolla",
+			"anio": 2022,
+			"combustible": "Híbrido",
+			"precio": 26500
+		},
+		{
+			"id": 2,
+			"marcaId": 2,
+			"modelo": "León",
+			"anio": 2021,
+			"combustible": "Gasolina",
+			"precio": 21900
+		},
+		{
+			"id": 3,
+			"marcaId": 3,
+			"modelo": "Focus",
+			"anio": 2019,
+			"combustible": "Diésel",
+			"precio": 15800
+		},
+		{
+			"id": 4,
+			"marcaId": 4,
+			"modelo": "ID.3",
+			"anio": 2023,
+			"combustible": "Eléctrico",
+			"precio": 34900
+		},
+		{
+			"id": 5,
+			"marcaId": 2,
+			"modelo": "Ibiza",
+			"anio": 2020,
+			"combustible": "Gasolina",
+			"precio": 14200
+		},
+		{
+			"id": 6,
+			"marcaId": 1,
+			"modelo": "Yaris",
+			"anio": 2024,
+			"combustible": "Híbrido",
+			"precio": 23100
+		}
+	],
+	"propietarios": [
+		{
+			"id": 1,
+			"nombre": "Laura Martínez",
+			"email": "laura.martinez@example.com",
+			"ciudad": "Madrid",
+			"cocheId": 1,
+			"fechaCompra": "2022-03-15"
+		},
+		{
+			"id": 2,
+			"nombre": "Carlos Gómez",
+			"email": "carlos.gomez@example.com",
+			"ciudad": "Barcelona",
+			"cocheId": 2,
+			"fechaCompra": "2021-09-02"
+		},
+		{
+			"id": 3,
+			"nombre": "Ana Ruiz",
+			"email": "ana.ruiz@example.com",
+			"ciudad": "Valencia",
+			"cocheId": 4,
+			"fechaCompra": "2023-06-20"
+		},
+		{
+			"id": 4,
+			"nombre": "Javier Sánchez",
+			"email": "javier.sanchez@example.com",
+			"ciudad": "Sevilla",
+			"cocheId": 3,
+			"fechaCompra": "2019-11-08"
+		},
+		{
+			"id": 5,
+			"nombre": "Marta López",
+			"email": "marta.lopez@example.com",
+			"ciudad": "Bilbao",
+			"cocheId": 6,
+			"fechaCompra": "2024-02-27"
+		}
+	]
 }

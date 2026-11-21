@@ -123,20 +123,33 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 							id="coche-marca"
 							disabled={cargandoMarcas}
 							aria-invalid={!!errors.marcaId}
-							aria-describedby={errors.marcaId ? "error-marcaId" : undefined}
+							aria-describedby={
+								errors.marcaId ? "error-marcaId" : undefined
+							}
 							{...register("marcaId")}
 						>
 							<option value="">
-								{cargandoMarcas ? "Cargando marcas..." : "Selecciona una marca"}
+								{cargandoMarcas
+									? "Cargando marcas..."
+									: "Selecciona una marca"}
 							</option>
 							{marcas.map((m) => (
-								<option key={m.id} value={m.id} disabled={!m.activa}>
-									{m.nombre} ({m.paisOrigen}) {!m.activa ? "— Inactiva" : ""}
+								<option
+									key={m.id}
+									value={m.id}
+									disabled={!m.activa}
+								>
+									{m.nombre} ({m.paisOrigen}){" "}
+									{!m.activa ? "— Inactiva" : ""}
 								</option>
 							))}
 						</select>
 						{errors.marcaId && (
-							<p id="error-marcaId" role="alert" className="field-error">
+							<p
+								id="error-marcaId"
+								role="alert"
+								className="field-error"
+							>
 								{errors.marcaId.message}
 							</p>
 						)}
@@ -149,11 +162,17 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 							type="text"
 							placeholder="Ej: Corolla, León, ID.3"
 							aria-invalid={!!errors.modelo}
-							aria-describedby={errors.modelo ? "error-modelo" : undefined}
+							aria-describedby={
+								errors.modelo ? "error-modelo" : undefined
+							}
 							{...register("modelo")}
 						/>
 						{errors.modelo && (
-							<p id="error-modelo" role="alert" className="field-error">
+							<p
+								id="error-modelo"
+								role="alert"
+								className="field-error"
+							>
 								{errors.modelo.message}
 							</p>
 						)}
@@ -165,11 +184,17 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 							id="coche-anio"
 							type="number"
 							aria-invalid={!!errors.anio}
-							aria-describedby={errors.anio ? "error-anio" : undefined}
+							aria-describedby={
+								errors.anio ? "error-anio" : undefined
+							}
 							{...register("anio")}
 						/>
 						{errors.anio && (
-							<p id="error-anio" role="alert" className="field-error">
+							<p
+								id="error-anio"
+								role="alert"
+								className="field-error"
+							>
 								{errors.anio.message}
 							</p>
 						)}
@@ -182,11 +207,17 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 							type="number"
 							placeholder="Ej: 24500"
 							aria-invalid={!!errors.precio}
-							aria-describedby={errors.precio ? "error-precio" : undefined}
+							aria-describedby={
+								errors.precio ? "error-precio" : undefined
+							}
 							{...register("precio")}
 						/>
 						{errors.precio && (
-							<p id="error-precio" role="alert" className="field-error">
+							<p
+								id="error-precio"
+								role="alert"
+								className="field-error"
+							>
 								{errors.precio.message}
 							</p>
 						)}
@@ -196,19 +227,31 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				<fieldset
 					className="radio-fieldset"
 					aria-invalid={!!errors.combustible}
-					aria-describedby={errors.combustible ? "error-combustible" : undefined}
+					aria-describedby={
+						errors.combustible
+							? "error-combustible"
+							: undefined
+					}
 				>
 					<legend>Tipo de combustible</legend>
 					<div className="radio-group">
 						{COMBUSTIBLES.map((tipo) => (
 							<label key={tipo} className="radio-option">
-								<input type="radio" value={tipo} {...register("combustible")} />
+								<input
+									type="radio"
+									value={tipo}
+									{...register("combustible")}
+								/>
 								<span>{tipo}</span>
 							</label>
 						))}
 					</div>
 					{errors.combustible && (
-						<p id="error-combustible" role="alert" className="field-error">
+						<p
+							id="error-combustible"
+							role="alert"
+							className="field-error"
+						>
 							{errors.combustible.message}
 						</p>
 					)}
@@ -221,14 +264,23 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 							type="checkbox"
 							aria-invalid={!!errors.confirmaVeracidad}
 							aria-describedby={
-								errors.confirmaVeracidad ? "error-confirmaVeracidad" : undefined
+								errors.confirmaVeracidad
+									? "error-confirmaVeracidad"
+									: undefined
 							}
 							{...register("confirmaVeracidad")}
 						/>
-						<span>Confirmo que los datos técnicos y el precio son veraces</span>
+						<span>
+							Confirmo que los datos técnicos y el precio son
+							veraces
+						</span>
 					</label>
 					{errors.confirmaVeracidad && (
-						<p id="error-confirmaVeracidad" role="alert" className="field-error">
+						<p
+							id="error-confirmaVeracidad"
+							role="alert"
+							className="field-error"
+						>
 							{errors.confirmaVeracidad.message}
 						</p>
 					)}
@@ -245,8 +297,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 								? "Guardando cambios..."
 								: "Registrando..."
 							: esEdicion
-							? "Guardar cambios (PUT)"
-							: "Registrar vehículo (POST)"}
+							  ? "Guardar cambios (PUT)"
+							  : "Registrar vehículo (POST)"}
 					</button>
 				</div>
 

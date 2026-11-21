@@ -1,108 +1,146 @@
-/* ============================================================================
-   5. ARCHIVO: src/App.jsx
-   PROPÓSITO: Componente raíz que coordina las pestañas, el estado levantado
-   de edición (cocheEditando / propietarioEditando) y el flujo unidireccional.
-   ============================================================================ */
-
 import { useState } from "react";
 import { useMarcas, useCambiarEstadoMarca } from "./hooks/useMotorData.js";
 import CocheForm from "./components/CocheForm.jsx";
 import CocheList from "./components/CocheList.jsx";
 import PropietarioForm from "./components/PropietarioForm.jsx";
 import PropietarioList from "./components/PropietarioList.jsx";
+import AdminLoginForm from "./components/AdminLoginForm.jsx";
+import MarcaForm from "./components/MarcaForm.jsx";
+import MarcaList from "./components/MarcaList.jsx";
 
 export default function App() {
-  // Estado local mínimo: pestaña activa, registro en edición (compartido entre Form y List) e interruptor del modo demo de dato corrupto.
   const [pestana, setPestana] = useState("coches");
-  const [cocheEditando, setCocheEditando] = useState(null);
-  const [propietarioEditando, setPropietarioEditando] = useState(null);
-  const [simularCorrupto, setSimularCorrupto] = useState(false);
+	const [cocheEditando, setCocheEditando] = useState(null);
+	const [propietarioEditando, setPropietarioEditando] = useState(null);
+	const [marcaEditando, setMarcaEditando] = useState(null);
+	const [simularCorrupto, setSimularCorrupto] = useState(false);
+	const [esAdmin, setEsAdmin] = useState(false);
 
-  const { data: marcas = [] } = useMarcas();
-  const toggleMarcaMut = useCambiarEstadoMarca();
+	const { data: marcas = [] } = useMarcas();
+	const toggleMarcaMut = useCambiarEstadoMarca();
 
-  return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div>
-          <h1>MotorRegistry</h1>
-          <p className="subtitle">
-            CRUD completo con React Hook Form · Zod v4 · TanStack Query v5
-          </p>
-        </div>
+	function cerrarSesionAdmin() {
+		setEsAdmin(false);
+		setMarcaEditando(null);
+	}
 
-        <label className="bonus-toggle">
-          <input
-            type="checkbox"
-            checked={simularCorrupto}
-            onChange={(e) => setSimularCorrupto(e.target.checked)}
-          />
-          <span>Simular dato corrupto del API (Bonus Zod)</span>
-        </label>
-      </header>
+	return (
+		<div className="app-shell">
+			<header className="app-header">
+				<div>
+					<h1>MotorRegistry</h1>
+					<p className="subtitle">
+						CRUD completo con React Hook Form · Zod v4 · TanStack Query v5
+					</p>
+				</div>
 
-      {/* Panel interactivo de marcas que dispara peticiones PATCH para activar o desactivar cada marca en tiempo real. */}
-      <section className="marcas-bar">
-        <span className="marcas-title">Marcas (clic = PATCH activa):</span>
-        <div className="marcas-chips">
-          {marcas.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`chip ${m.activa ? "chip-on" : "chip-off"}`}
-              disabled={toggleMarcaMut.isPending}
-              onClick={() =>
-                toggleMarcaMut.mutate({ id: m.id, activa: !m.activa })
-              }
-            >
-              {m.nombre} · {m.activa ? "Activa" : "Inactiva"}
-            </button>
-          ))}
-        </div>
-      </section>
+				<label className="bonus-toggle">
+					<input
+						type="checkbox"
+						checked={simularCorrupto}
+						onChange={(e) => setSimularCorrupto(e.target.checked)}
+					/>
+					<span>Simular dato corrupto del API (Bonus Zod)</span>
+				</label>
+			</header>
 
-      <nav className="tabs">
-        <button
-          type="button"
-          className={`tab ${pestana === "coches" ? "tab-active" : ""}`}
-          onClick={() => setPestana("coches")}
-        >
-          Vehículos (CRUD completo)
-        </button>
-        <button
-          type="button"
-          className={`tab ${pestana === "propietarios" ? "tab-active" : ""}`}
-          onClick={() => setPestana("propietarios")}
-        >
-          Propietarios
-        </button>
-      </nav>
+			<section className="marcas-bar">
+				<span className="marcas-title">
+					{esAdmin
+						? "Marcas (Admin activo · clic = PATCH):"
+						: "Marcas (inicia sesión en Admin para modificar):"}
+				</span>
+				<div className="marcas-chips">
+					{marcas.map((m) => (
+						<button
+							key={m.id}
+							type="button"
+							className={`chip ${m.activa ? "chip-on" : "chip-off"}`}
+							disabled={!esAdmin || toggleMarcaMut.isPending}
+							onClick={() =>
+								toggleMarcaMut.mutate({ id: m.id, activa: !m.activa })
+							}
+						>
+							{m.nombre} · {m.activa ? "Activa" : "Inactiva"}
+						</button>
+					))}
+				</div>
+			</section>
 
-      {/* Renderizado condicional por pestaña: pasa datos hacia abajo por props y recibe acciones de edición/cancelación mediante callbacks. */}
-      <main className="main-content">
-        {pestana === "coches" ? (
-          <>
-            <CocheForm
-              cocheEditando={cocheEditando}
-              onCancelarEdicion={() => setCocheEditando(null)}
-            />
-            <CocheList
-              simularCorrupto={simularCorrupto}
-              onEditarCoche={(coche) => setCocheEditando(coche)}
-            />
-          </>
-        ) : (
-          <>
-            <PropietarioForm
-              propietarioEditando={propietarioEditando}
-              onCancelarEdicion={() => setPropietarioEditando(null)}
-            />
-            <PropietarioList
-              onEditarPropietario={(prop) => setPropietarioEditando(prop)}
-            />
-          </>
-        )}
-      </main>
-    </div>
-  );
+			<nav className="tabs">
+				<button
+					type="button"
+					className={`tab ${pestana === "coches" ? "tab-active" : ""}`}
+					onClick={() => setPestana("coches")}
+				>
+					Vehículos
+				</button>
+				<button
+					type="button"
+					className={`tab ${pestana === "propietarios" ? "tab-active" : ""}`}
+					onClick={() => setPestana("propietarios")}
+				>
+					Propietarios
+				</button>
+				<button
+					type="button"
+					className={`tab ${pestana === "marcas" ? "tab-active" : ""}`}
+					onClick={() => setPestana("marcas")}
+				>
+					Marcas {esAdmin ? "(Admin ✓)" : "(Admin)"}
+				</button>
+			</nav>
+
+			<main className="main-content">
+				{pestana === "coches" && (
+					<>
+						<CocheForm
+							cocheEditando={cocheEditando}
+							onCancelarEdicion={() => setCocheEditando(null)}
+						/>
+						<CocheList
+							simularCorrupto={simularCorrupto}
+							onEditarCoche={(coche) => setCocheEditando(coche)}
+						/>
+					</>
+				)}
+
+				{pestana === "propietarios" && (
+					<>
+						<PropietarioForm
+							propietarioEditando={propietarioEditando}
+							onCancelarEdicion={() => setPropietarioEditando(null)}
+						/>
+						<PropietarioList
+							onEditarPropietario={(prop) => setPropietarioEditando(prop)}
+						/>
+					</>
+				)}
+
+				{pestana === "marcas" &&
+					(!esAdmin ? (
+						<AdminLoginForm onLoginExito={() => setEsAdmin(true)} />
+					) : (
+						<>
+							<div className="form-actions">
+								<button
+									type="button"
+									className="btn-secondary"
+									onClick={cerrarSesionAdmin}
+								>
+									Cerrar sesión de administrador
+								</button>
+							</div>
+							<MarcaForm
+								marcaEditando={marcaEditando}
+								onCancelarEdicion={() => setMarcaEditando(null)}
+							/>
+							<MarcaList
+								onEditarMarca={(marca) => setMarcaEditando(marca)}
+							/>
+						</>
+					))}
+			</main>
+		</div>
+	);
 }
