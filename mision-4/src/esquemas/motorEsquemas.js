@@ -4,105 +4,150 @@
       cliente como las respuestas del API.
       ============================================================================ */
 
+// Trae la herramienta "z" de la librería Zod, que sirve para crear reglas de validación.
 import { z } from "zod";
 
+// Mira el reloj del ordenador, saca el año actual (ej. 2026) y lo guarda en ANIO_ACTUAL.
 const ANIO_ACTUAL = new Date().getFullYear();
 
+// Crea y comparte la lista oficial con los 4 únicos combustibles permitidos.
 export const COMBUSTIBLES = ["Híbrido", "Gasolina", "Diésel", "Eléctrico"];
 
-// Funciones puras de validación (Temas 1 y 2: split, map, Number.isNaN, new Date)
+// Crea una comprobación llamada esFechaISOValida que recibe un texto (ej. "2024-02-27").
+// --- Función auxiliar 1: comprobar si una fecha tiene pinta de "AAAA-MM-DD" ---
 function esFechaISOValida(texto) {
-    // Valida manualmente el formato YYYY-MM-DD y rangos básicos de mes/día usando funciones puras de JS.
+
+    // Parte el texto por los guiones: "2024-02-27" se convierte en ["2024", "02", "27"].
     const partes = texto.split("-");
+    // Si no salieron exactamente 3 trozos (año, mes, día), dice "falso" (fecha mala).
     if (partes.length !== 3) return false;
 
+    // Convierte los 3 trozos de texto a números y los guarda en anio, mes y dia.
     const [anio, mes, dia] = partes.map(Number);
+    // Va a devolver verdadero (true) SOLO si se cumplen TODAS estas condiciones (&& = "y"):
     return (
+        // El primer trozo (año) debe tener exactamente 4 cifras.
         partes[0].length === 4 &&
+        // El segundo trozo (mes) debe tener 2 cifras.
         partes[1].length === 2 &&
+        // El tercer trozo (día) debe tener 2 cifras.
         partes[2].length === 2 &&
+        // El año debe ser un número de verdad (no texto raro convertido a NaN).
         !Number.isNaN(anio) &&
+        // El mes debe ser un número de verdad.
         !Number.isNaN(mes) &&
+        // El día debe ser un número de verdad.
         !Number.isNaN(dia) &&
+        // El mes debe estar entre 1 (enero) y 12 (diciembre).
         mes >= 1 &&
         mes <= 12 &&
+        // El día debe estar entre 1 y 31.
         dia >= 1 &&
         dia <= 31
+    // Termina la comprobación y cierra la función.
     );
 }
 
+// --- Función auxiliar 2: comprobar que la fecha no está en el futuro ---
+// Crea otra comprobación para asegurarse de que nadie ponga una compra de mañana.
 function esFechaNoFutura(texto) {
-    // Comprueba que la fecha de compra introducida no sea posterior al día actual.
+    // Saca el año, mes y día como números.
     const [anio, mes, dia] = texto.split("-").map(Number);
+    // Construye una fecha real de calendario (se resta 1 al mes porque en JS enero es el mes 0).
     const fechaCompra = new Date(anio, mes - 1, dia);
+    // Devuelve verdadero si esa fecha es anterior o igual al momento actual.
     return fechaCompra <= new Date();
+    // Cierra la función.
 }
 
-/* ============================================================================
-      1. ESQUEMAS DE RESPUESTA DEL API (para validar con safeParse en servicios)
-      ============================================================================ */
-
-// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
+// --- BLOQUE 1: Reglas para los datos que llegan desde el servidor (db.json) ---
+// Define cómo debe ser obligatoriamente una "marca" que llegue del servidor:
 export const marcaApiSchema = z.object({
+    // "id" debe ser un número entero (sin decimales) de 1 en adelante.
     id: z.number().int().min(1),
+    // "nombre" debe ser texto con al menos 1 letra.
     nombre: z.string().min(1, "Nombre de marca vacío"),
+    // "paisOrigen" debe ser texto no vacío.
     paisOrigen: z.string().min(1),
+    // "anioFundacion" debe ser número entero >= 1880 y, con .refine(), no mayor al año actual.
     anioFundacion: z
         .number()
         .int()
         .min(1880)
         .refine((a) => a <= ANIO_ACTUAL, { error: "Año de fundación inválido" }),
+    // "sede" debe ser texto no vacío.
     sede: z.string().min(1),
-    activa: z.boolean(), // Único método externo de Zod (campo booleano en db.json)
+    // "activa" debe ser estrictamente true (sí) o false (no).
+    activa: z.boolean(),
+// Cierra la regla de una marca.
 });
 
+// Regla para una LISTA completa de marcas: todos sus elementos deben cumplir marcaApiSchema.
 export const listaMarcasSchema = z.array(marcaApiSchema);
 
-// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
+
+// Define cómo debe ser un "coche" que llegue del servidor:
 export const cocheApiSchema = z.object({
+    // Identificador entero >= 1.
     id: z.number().int().min(1),
+    // Número que enlaza el coche con su marca.
     marcaId: z.number().int().min(1),
+    // Nombre del modelo no vacío.
     modelo: z.string().min(1, "Modelo vacío en el API"),
+    // Año entero entre 1900 y el año que viene como máximo.
     anio: z
         .number()
         .int()
         .min(1900, "Año por debajo de 1900")
         .refine((a) => a <= ANIO_ACTUAL + 1, { error: "Año fuera de rango" }),
+    // Debe ser un texto que esté dentro de la lista COMBUSTIBLES.
+    // Debe ser una de las 4 opciones válidas.
     combustible: z.string().refine((c) => COMBUSTIBLES.includes(c), {
         error: "Combustible no reconocido por el catálogo",
     }),
+    // Debe ser un número (no texto como "gratis") mayor o igual a 1.
     precio: z.number().min(1, "El precio debe ser un número mayor que 0"),
+// Cierra la regla de un coche.
 });
 
+// Regla para la lista entera de coches del servidor.
 export const listaCochesSchema = z.array(cocheApiSchema);
 
-// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
+
+// Define cómo debe ser un "propietario" que llegue del servidor:
 export const propietarioApiSchema = z.object({
+    // Entero >= 1.
     id: z.number().int().min(1),
+    // Texto de mínimo 2 letras.
     nombre: z.string().min(2),
+    // Formato válido de correo.
     email: z.email("Email corrupto en respuesta del API"),
+    // Texto de mínimo 2 letras.
     ciudad: z.string().min(2),
+    // ID numérico del coche que posee.
     cocheId: z.number().int().min(1),
+    // Texto que pase nuestra función esFechaISOValida (AAAA-MM-DD).
     fechaCompra: z.string().refine(esFechaISOValida, {
         error: "Fecha con formato distinto a YYYY-MM-DD",
     }),
 });
+// Cierra la regla de propietario.
 
 export const listaPropietariosSchema = z.array(propietarioApiSchema);
-
-/* ============================================================================
-      2. ESQUEMAS DE FORMULARIO (conectados a React Hook Form con zodResolver)
-      ============================================================================ */
-
-// Esquema del formulario de vehículos: convierte strings de inputs HTML a números con z.coerce.number() y aplica validaciones cruzadas con .refine().
+// Regla para la lista entera de propietarios.
+// --- BLOQUE 2: Reglas para lo que escribe el usuario en los formularios ---
 export const cocheFormSchema = z
     .object({
+        // Reglas para el formulario de crear/editar coche:
         marcaId: z.coerce
             .number({ error: "Selecciona una marca del catálogo" })
+            // Los campos HTML siempre dan texto ("1"). z.coerce.number() lo convierte
+            // primero a número (1) y luego exige que sea entero >= 1.
             .int()
             .min(1, "Debes elegir una marca"),
         modelo: z
             .string()
+            // Quita espacios sobrantes (.trim()) y exige que el modelo tenga entre 2 y 60 letras.
             .refine((v) => v.trim().length >= 2, {
                 error: "El modelo debe tener al menos 2 caracteres",
             })
@@ -111,6 +156,7 @@ export const cocheFormSchema = z
             }),
         anio: z.coerce
             .number({ error: "Introduce un año numérico" })
+            // Convierte el año a número entero entre 1950 y el año siguiente al actual.
             .int("El año debe ser un número entero")
             .min(1950, "El año mínimo permitido es 1950")
             .refine((a) => a <= ANIO_ACTUAL + 1, {
@@ -121,27 +167,35 @@ export const cocheFormSchema = z
         }),
         precio: z.coerce
             .number({ error: "Introduce un precio numérico" })
+            // Convierte el precio a número entre 1.000 € y 500.000 €.
             .min(1000, "El precio mínimo de catálogo es 1000 €")
             .refine((p) => p <= 500000, {
                 error: "El precio máximo permitido es 500000 €",
             }),
+        // Exige que la casilla de verificación esté marcada (tiene que valer exactamente true).
         confirmaVeracidad: z.literal(true, {
             error: "Debes confirmar que los datos técnicos son veraces",
         }),
     })
-    // Reglas de negocio cruzadas: impiden incoherencias entre combustible/año (eléctricos >= 2012) y año/precio (recientes >= 10.000 €).
+
+    // Regla que cruza DOS campos a la vez: prohíbe poner Eléctrico con año menor a 2012.
+    // "path: ['anio']" indica que el mensaje rojo debe salir debajo del campo Año.
     .refine((datos) => !(datos.combustible === "Eléctrico" && datos.anio < 2012), {
         error: "Un vehículo eléctrico moderno debe ser de 2012 o posterior",
         path: ["anio"],
     })
+    // Segunda regla cruzada: un coche de 2023 o más nuevo no puede costar menos de 10.000 €.
+    // Muestra el error debajo del campo Precio.
     .refine((datos) => !(datos.anio >= 2023 && datos.precio < 10000), {
         error: "Un vehículo de 2023 o posterior no puede costar menos de 10000 €",
         path: ["precio"],
     });
 
-// Esquema del formulario de propietarios: valida formato de email (z.email), nombre compuesto, ID de vehículo y fecha de compra no futura.
+
 export const propietarioFormSchema = z
     .object({
+        // Reglas para el formulario de crear/editar propietario:
+        // nombre: texto de mínimo 3 letras que ADEMÁS contenga un espacio (nombre y apellido).
         nombre: z
             .string()
             .refine((v) => v.trim().length >= 3, {
@@ -150,25 +204,31 @@ export const propietarioFormSchema = z
             .refine((v) => v.trim().includes(" "), {
                 error: "Introduce nombre y al menos un apellido",
             }),
+        // Debe tener formato de correo (con @ y dominio).
         email: z.email("Email no válido (ejemplo: nombre@dominio.com)"),
+        // ciudad: texto de mínimo 2 letras sin contar espacios.
         ciudad: z.string().refine((v) => v.trim().length >= 2, {
             error: "La ciudad debe tener al menos 2 caracteres",
         }),
+        // cocheId: convierte el valor del desplegable a número entero >= 1.
         cocheId: z.coerce
             .number({ error: "Selecciona un vehículo" })
             .int()
             .min(1, "Debes asignar un vehículo del inventario"),
+        // fechaCompra: debe pasar esFechaISOValida.
         fechaCompra: z.string().refine(esFechaISOValida, {
             error: "Selecciona una fecha de compra válida",
         }),
     })
-    // Validación cruzada temporal: fecha no posterior a hoy
+
     .refine((datos) => esFechaNoFutura(datos.fechaCompra), {
         error: "La fecha de compra no puede ser posterior a hoy",
+        // Prohíbe poner una fecha futura y pinta el error debajo del campo fechaCompra.
         path: ["fechaCompra"],
     });
 
-    export const adminLoginSchema = z.object({
+// Reglas del login de administrador: exige que ni el usuario ni la contraseña estén vacíos.
+export const adminLoginSchema = z.object({
     usuario: z.string().refine((v) => v.trim().length >= 1, {
         error: "Introduce el nombre de usuario",
     }),
@@ -177,6 +237,8 @@ export const propietarioFormSchema = z
     }),
 });
 
+// Reglas del formulario de marcas: nombre, país y sede de mínimo 2 letras;
+// anioFundacion convertido a número entre 1880 y el año actual; activa sí/no.
 export const marcaFormSchema = z.object({
     nombre: z.string().refine((v) => v.trim().length >= 2, {
         error: "El nombre de la marca debe tener al menos 2 caracteres",

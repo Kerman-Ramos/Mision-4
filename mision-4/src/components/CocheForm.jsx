@@ -4,6 +4,8 @@
    gestiona tanto el alta (POST) como la edición completa (PUT) de vehículos.
    ============================================================================ */
 
+// Importa useEffect, useState, useForm, zodResolver, las reglas cocheFormSchema,
+// la lista COMBUSTIBLES y los hooks useMarcas, useCrearCoche y useReemplazarCoche.
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +16,7 @@ import {
 	useReemplazarCoche,
 } from "../hooks/useMotorData.js";
 
+// Plantilla limpia para cuando el formulario está vacío o acaba de enviarse.
 const VALORES_INICIALES = {
 	marcaId: "",
 	modelo: "",
@@ -23,10 +26,14 @@ const VALORES_INICIALES = {
 	confirmaVeracidad: false,
 };
 
+// Recibe el coche a editar (o null si estamos creando) y la función para salir de edición.
 export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
+	// Pide las marcas para rellenar el desplegable y guarda si aún están cargando.
 	const { data: marcas = [], isPending: cargandoMarcas } = useMarcas();
+	// Guarda el texto verde de confirmación ("Vehículo registrado...").
 	const [mensajeExito, setMensajeExito] = useState("");
 
+	// Conecta el formulario con las reglas de Zod (incluidas las reglas cruzadas).
 	const {
 		register,
 		handleSubmit,
@@ -34,25 +41,34 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		setFocus,
 		formState: { errors },
 	} = useForm({
-		// Conecta el esquema cocheFormSchema vía zodResolver; al usar inputs no controlados con register, evita re-renders en cada pulsación.
+
 		resolver: zodResolver(cocheFormSchema),
 		defaultValues: VALORES_INICIALES,
 	});
 
+	// Prepara el POST: cuando el servidor confirme que se guardó, muestra el mensaje
+	// verde y vacía el formulario con reset(VALORES_INICIALES).
 	const crearMut = useCrearCoche((cocheCreado) => {
 		setMensajeExito(`Vehículo "${cocheCreado.modelo}" registrado (POST).`);
 		reset(VALORES_INICIALES);
 	});
 
+	// Prepara el PUT: cuando termine, muestra mensaje verde y llama a onCancelarEdicion().
 	const editarMut = useReemplazarCoche((cocheActualizado) => {
 		setMensajeExito(`Vehículo "${cocheActualizado.modelo}" actualizado (PUT).`);
 		onCancelarEdicion();
 	});
 
+	// Verdadero (true) si hay un coche en edición; falso (false) si estamos creando uno nuevo.
 	const esEdicion = Boolean(cocheEditando);
+	// Elige qué mutación vigilar (para saber si está enviando o si dio error).
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
-	// Cuando llega un cocheEditando por props, precarga el formulario con reset() y mueve el foco al campo modelo.
+
+	// Vigila la prop cocheEditando. Cada vez que el usuario pulsa "Editar (PUT)" en
+	// una tarjeta, rellena automáticamente todas las cajas con reset({...}) convirtiendo
+	// marcaId a texto para que el <select> lo marque, deja el checkbox en false para
+	// volver a confirmar y pone el cursor en "modelo". Si se cancela, limpia todo.
 	useEffect(() => {
 		if (cocheEditando) {
 			reset({
@@ -70,7 +86,12 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 	}, [cocheEditando, reset, setFocus]);
 
 	function onSubmit(datosValidados) {
-		// Solo se ejecuta si Zod valida todos los campos. Construye el payload sin el checkbox de confirmación y dispara POST o PUT según el modo.
+// Borra mensajeExito anterior.
+// -> Crea el objeto "payload" SOLO con los 5 campos que existen en db.json (dejando
+// fuera confirmaVeracidad, que era solo una casilla de validación en pantalla) y
+// quitando espacios al modelo con .trim().
+// -> Si esEdicion es true dispara editarMut.mutate (PUT); si no, crearMut.mutate (POST).
+
 		setMensajeExito("");
 		const payload = {
 			marcaId: datosValidados.marcaId,
@@ -87,8 +108,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		}
 	}
 
-	// Accesibilidad por teclado: si falla la validación al enviar, lleva automáticamente el foco al primer campo erróneo con setFocus().
+
 	function onInvalid(errores) {
+		// Si Zod detecta errores, mueve el cursor al primer campo erróneo.
 		const camposConError = Object.keys(errores);
 		if (camposConError.length > 0) {
 			setFocus(camposConError[0]);
@@ -96,6 +118,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 	}
 
 	return (
+		// Cabecera de la tarjeta: cambia el título entre "Editar vehículo #X (PUT)" y
+		// "Registrar nuevo vehículo (POST)". Si está editando, muestra el botón "Cancelar edición".
 		<section className="card">
 			<div className="card-header">
 				<h2>
@@ -114,10 +138,14 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				)}
 			</div>
 
-			{/* Usa noValidate para que mande Zod, etiquetas label/htmlFor, fieldset/legend para radios, aria-invalid/aria-describedby y regiones role="alert" / role="status". */}
+
 			<form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
 				<div className="form-grid">
 					<div className="field">
+						{/* Se deshabilita mientras cargandoMarcas es true. */}
+						{/* -> Con marcas.map() pinta cada marca como <option>. Si una marca tiene activa === false, */}
+						{/* le añade disabled={!m.activa} y el texto "— Inactiva" para que no puedas elegirla. */}
+						{/* -> Si hay error (errors.marcaId), lo muestra en <p role="alert">. */}
 						<label htmlFor="coche-marca">Marca</label>
 						<select
 							id="coche-marca"
@@ -157,6 +185,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 
 					<div className="field">
 						<label htmlFor="coche-modelo">Modelo</label>
+						{/* Campo 2 (Modelo): <input type="text"> con {...register("modelo")} y su error accesible. */}
 						<input
 							id="coche-modelo"
 							type="text"
@@ -180,6 +209,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 
 					<div className="field">
 						<label htmlFor="coche-anio">Año de fabricación</label>
+						{/* Campo 3 (Año): <input type="number"> con {...register("anio")} y su error accesible. */}
 						<input
 							id="coche-anio"
 							type="number"
@@ -202,6 +232,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 
 					<div className="field">
 						<label htmlFor="coche-precio">Precio (€)</label>
+						{/* Campo 4 (Precio): <input type="number"> con {...register("precio")} y su error accesible. */}
 						<input
 							id="coche-precio"
 							type="number"
@@ -224,6 +255,10 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 					</div>
 				</div>
 
+				{/* Envuelve los 4 botones de radio dentro de <fieldset> con su título <legend>. */}
+				{/* Regla de accesibilidad para agrupar opciones relacionadas. */}
+				{/* Recorre COMBUSTIBLES con .map() creando un <input type="radio"> para cada uno. */}
+				{/* Todos quedan registrados bajo el mismo nombre "combustible". */}
 				<fieldset
 					className="radio-fieldset"
 					aria-invalid={!!errors.combustible}
@@ -259,6 +294,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 
 				<div className="field checkbox-field">
 					<label htmlFor="coche-confirma" className="checkbox-label">
+						{/* Campo 6 (Confirmación): <input type="checkbox"> conectado a "confirmaVeracidad". */}
+						{/* Su mensaje de error aparece debajo si intentan enviar sin marcarlo. */}
 						<input
 							id="coche-confirma"
 							type="checkbox"
@@ -287,6 +324,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				</div>
 
 				<div className="form-actions">
+					{/* disabled={mutacionActiva.isPending}: solo se bloquea mientras viaja la petición. */}
+					{/* Evita que un doble clic cree el coche dos veces y cambia el texto dinámicamente. */}
 					<button
 						type="submit"
 						className="btn-primary"
@@ -309,6 +348,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				)}
 				{mensajeExito && (
 					<p role="status" className="banner-success">
+						{/* Si mutacionActiva.isError es true: cartel rojo con role="alert". */}
+						{/* -> Si mensajeExito tiene texto: cartel verde con role="status" (los lectores de */}
+						{/* pantalla lo anuncian amablemente al terminar de hablar). */}
 						{mensajeExito}
 					</p>
 				)}

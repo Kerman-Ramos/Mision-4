@@ -1,9 +1,12 @@
+// Importa useEffect, useState, useForm, zodResolver, marcaFormSchema,
+// useCrearMarca y useReemplazarMarca.
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { marcaFormSchema } from "../esquemas/motorEsquemas.js";
 import { useCrearMarca, useReemplazarMarca } from "../hooks/useMotorData.js";
 
+// VALORES_INICIALES: campos vacíos, año por defecto 1950 y activa en true.
 const VALORES_INICIALES = {
 	nombre: "",
 	paisOrigen: "",
@@ -13,8 +16,10 @@ const VALORES_INICIALES = {
 };
 
 export default function MarcaForm({ marcaEditando, onCancelarEdicion }) {
+	// Estado mensajeExito para confirmaciones verdes.
 	const [mensajeExito, setMensajeExito] = useState("");
 
+	// Configura useForm con marcaFormSchema y VALORES_INICIALES.
 	const {
 		register,
 		handleSubmit,
@@ -26,6 +31,7 @@ export default function MarcaForm({ marcaEditando, onCancelarEdicion }) {
 		defaultValues: VALORES_INICIALES,
 	});
 
+	// Configura crearMut (POST) y editarMut (PUT), con sus mensajes verdes y reset/cancelación.
 	const crearMut = useCrearMarca((creada) => {
 		setMensajeExito(`Marca "${creada.nombre}" registrada (POST).`);
 		reset(VALORES_INICIALES);
@@ -36,9 +42,12 @@ export default function MarcaForm({ marcaEditando, onCancelarEdicion }) {
 		onCancelarEdicion();
 	});
 
+	// Calcula esEdicion y mutacionActiva.
 	const esEdicion = Boolean(marcaEditando);
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
+	// useEffect: si llega marcaEditando, precarga los 5 campos con reset() y lleva el foco
+	// a "nombre"; si pasa a null, devuelve el formulario a VALORES_INICIALES.
 	useEffect(() => {
 		if (marcaEditando) {
 			reset({
@@ -55,6 +64,8 @@ export default function MarcaForm({ marcaEditando, onCancelarEdicion }) {
 	}, [marcaEditando, reset, setFocus]);
 
 	function onSubmit(datosValidados) {
+		// onSubmit(datosValidados): limpia espacios (.trim()) en nombre, paisOrigen y sede,
+		// y lanza editarMut (PUT) o crearMut (POST).
 		setMensajeExito("");
 		const payload = {
 			nombre: datosValidados.nombre.trim(),
@@ -71,11 +82,20 @@ export default function MarcaForm({ marcaEditando, onCancelarEdicion }) {
 		}
 	}
 
+	// onInvalid(errores): lleva el foco al primer campo erróneo con setFocus().
 	function onInvalid(errores) {
 		const primerCampo = Object.keys(errores)[0];
 		if (primerCampo) setFocus(primerCampo);
 	}
 
+	// Renderiza la tarjeta con título dinámico, botón "Cancelar edición" si aplica,
+	// y los 5 campos accesibles:
+	// - Nombre de la marca (text)
+	// - País de origen (text)
+	// - Año de fundación (number)
+	// - Sede central (text)
+	// - Checkbox "Marca activa en el catálogo"
+	// - Botón submit (deshabilitado solo durante isPending) + banners de error y éxito.
 	return (
 		<section className="card">
 			<div className="card-header">

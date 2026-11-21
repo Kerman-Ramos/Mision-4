@@ -4,6 +4,8 @@
 	  (POST) o editar (PUT) propietarios vinculados a un vehículo del inventario.
 	  ============================================================================ */
 
+// Importa hooks de React, React Hook Form, zodResolver, propietarioFormSchema
+// y los hooks de TanStack Query (useCoches, useMarcas, crear y reemplazar propietario).
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +17,7 @@ import {
 	useReemplazarPropietario,
 } from "../hooks/useMotorData.js";
 
+// VALORES_INICIALES con los 5 campos vacíos.
 const VALORES_INICIALES = {
 	nombre: "",
 	email: "",
@@ -23,6 +26,8 @@ const VALORES_INICIALES = {
 	fechaCompra: "",
 };
 
+// Declara PropietarioForm, obtiene coches y marcas de caché, crea mensajeExito y
+// construye mapaMarcas (new Map) para mostrar "Toyota Corolla (2022)" en el desplegable.
 export default function PropietarioForm({
 	propietarioEditando,
 	onCancelarEdicion,
@@ -33,6 +38,7 @@ export default function PropietarioForm({
 
 	const mapaMarcas = new Map(marcas.map((m) => [m.id, m.nombre]));
 
+	// Configura useForm con propietarioFormSchema y VALORES_INICIALES.
 	const {
 		register,
 		handleSubmit,
@@ -44,6 +50,7 @@ export default function PropietarioForm({
 		defaultValues: VALORES_INICIALES,
 	});
 
+	// Configura crearMut (POST), editarMut (PUT), esEdicion y mutacionActiva.
 	const crearMut = useCrearPropietario((creado) => {
 		setMensajeExito(`Propietario "${creado.nombre}" registrado (POST).`);
 		reset(VALORES_INICIALES);
@@ -57,7 +64,9 @@ export default function PropietarioForm({
 	const esEdicion = Boolean(propietarioEditando);
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
-	// Precarga los datos del propietario seleccionado para edición (PUT) mediante reset() y enfoca el campo nombre.
+
+	// useEffect: si llega propietarioEditando, rellena los 5 campos con reset() (pasando
+	// cocheId a texto para el <select>) y mueve el foco a "nombre".
 	useEffect(() => {
 		if (propietarioEditando) {
 			reset({
@@ -73,8 +82,10 @@ export default function PropietarioForm({
 		}
 	}, [propietarioEditando, reset, setFocus]);
 
+	// onSubmit(datosValidados): copia todos los datos validados (...datosValidados),
+	// limpia espacios de nombre y ciudad, y ejecuta PUT o POST según esEdicion.
 	function onSubmit(datosValidados) {
-		// Limpia espacios de los textos validados antes de mutar (POST/PUT).
+
 		setMensajeExito("");
 		const payload = {
 			...datosValidados,
@@ -89,13 +100,21 @@ export default function PropietarioForm({
 		}
 	}
 
-	// Dirige el foco al primer campo inválido si hay errores.
+// onInvalid(errores): enfoca el primer campo con fallo.
+
 	function onInvalid(errores) {
 		const camposConError = Object.keys(errores);
 		if (camposConError.length > 0) {
 			setFocus(camposConError[0]);
 		}
 	}
+// Renderiza el formulario accesible con:
+// - Nombre completo (autoComplete="name")
+// - Correo electrónico (type="email", autoComplete="email")
+// - Ciudad (type="text")
+// - Vehículo adquirido (<select> que lista todos los coches con su marca y año)
+// - Fecha de compra (type="date", abre el calendario del navegador)
+// - Botón submit (deshabilitado en isPending) y carteles de error/éxito.
 
 	return (
 		<section className="card">
