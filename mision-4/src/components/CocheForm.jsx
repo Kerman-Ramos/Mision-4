@@ -1,3 +1,9 @@
+/* ============================================================================
+   6. ARCHIVO: src/components/CocheForm.jsx
+   PROPÓSITO: Formulario no controlado con React Hook Form + zodResolver que
+   gestiona tanto el alta (POST) como la edición completa (PUT) de vehículos.
+   ============================================================================ */
+
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +34,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		setFocus,
 		formState: { errors },
 	} = useForm({
+		// Conecta el esquema cocheFormSchema vía zodResolver; al usar inputs no controlados con register, evita re-renders en cada pulsación.
 		resolver: zodResolver(cocheFormSchema),
 		defaultValues: VALORES_INICIALES,
 	});
@@ -45,7 +52,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 	const esEdicion = Boolean(cocheEditando);
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
-	// Sincroniza el formulario cuando se selecciona un coche para editar (PUT)
+	// Cuando llega un cocheEditando por props, precarga el formulario con reset() y mueve el foco al campo modelo.
 	useEffect(() => {
 		if (cocheEditando) {
 			reset({
@@ -63,6 +70,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 	}, [cocheEditando, reset, setFocus]);
 
 	function onSubmit(datosValidados) {
+		// Solo se ejecuta si Zod valida todos los campos. Construye el payload sin el checkbox de confirmación y dispara POST o PUT según el modo.
 		setMensajeExito("");
 		const payload = {
 			marcaId: datosValidados.marcaId,
@@ -79,7 +87,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		}
 	}
 
-	// 2º callback de handleSubmit (avisado al principio): mueve el foco al primer error
+	// Accesibilidad por teclado: si falla la validación al enviar, lleva automáticamente el foco al primer campo erróneo con setFocus().
 	function onInvalid(errores) {
 		const camposConError = Object.keys(errores);
 		if (camposConError.length > 0) {
@@ -106,6 +114,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				)}
 			</div>
 
+			{/* Usa noValidate para que mande Zod, etiquetas label/htmlFor, fieldset/legend para radios, aria-invalid/aria-describedby y regiones role="alert" / role="status". */}
 			<form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
 				<div className="form-grid">
 					<div className="field">

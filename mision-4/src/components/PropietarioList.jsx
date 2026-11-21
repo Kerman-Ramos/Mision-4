@@ -1,3 +1,9 @@
+/* ============================================================================
+   9. ARCHIVO: src/components/PropietarioList.jsx
+   PROPÓSITO: Listado relacional de propietarios (cruza propietarios -> coches
+   -> marcas desde la caché de TanStack Query) con buscador y borrado (DELETE).
+   ============================================================================ */
+
 import { useState } from "react";
 import {
   usePropietarios,
@@ -22,10 +28,10 @@ export default function PropietarioList({ onEditarPropietario }) {
   const mapaCoches = new Map(coches.map((c) => [c.id, c]));
   const mapaMarcas = new Map(marcas.map((m) => [m.id, m.nombre]));
 
-  // Ciudades únicas ordenadas (Tema 2: Set + toSorted inmutable)
+  // Extrae las ciudades únicas con Set y las ordena de forma inmutable con toSorted() para alimentar el desplegable de filtro.
   const ciudades = [...new Set(propietarios.map((p) => p.ciudad))].toSorted();
 
-  // Filtro derivado en render (Tema 3: sin estado redundante ni useEffect)
+  // Filtro derivado en render que combina ciudad y búsqueda de texto sobre nombre, email, ciudad y vehículo asignado.
   const termino = busqueda.trim().toUpperCase();
   const propietariosFiltrados = propietarios.filter((p) => {
     const coche = mapaCoches.get(p.cocheId);

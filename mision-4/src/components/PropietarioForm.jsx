@@ -1,3 +1,9 @@
+/* ============================================================================
+   8. ARCHIVO: src/components/PropietarioForm.jsx
+   PROPÓSITO: Formulario accesible con React Hook Form + Zod para registrar
+   (POST) o editar (PUT) propietarios vinculados a un vehículo del inventario.
+   ============================================================================ */
+
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +57,7 @@ export default function PropietarioForm({
   const esEdicion = Boolean(propietarioEditando);
   const mutacionActiva = esEdicion ? editarMut : crearMut;
 
+  // Precarga los datos del propietario seleccionado para edición (PUT) mediante reset() y enfoca el campo nombre.
   useEffect(() => {
     if (propietarioEditando) {
       reset({
@@ -67,6 +74,7 @@ export default function PropietarioForm({
   }, [propietarioEditando, reset, setFocus]);
 
   function onSubmit(datosValidados) {
+    // Limpia espacios de los textos validados antes de mutar (POST/PUT).
     setMensajeExito("");
     const payload = {
       ...datosValidados,
@@ -81,6 +89,7 @@ export default function PropietarioForm({
     }
   }
 
+  // Dirige el foco al primer campo inválido si hay errores.
   function onInvalid(errores) {
     const camposConError = Object.keys(errores);
     if (camposConError.length > 0) {

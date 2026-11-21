@@ -1,3 +1,9 @@
+/* ============================================================================
+   7. ARCHIVO: src/components/CocheList.jsx
+   PROPÓSITO: Listado de vehículos (GET) con filtros locales y acciones rápidas
+   de edición (PUT), ajuste de precio (PATCH) y borrado (DELETE).
+   ============================================================================ */
+
 import { useState } from "react";
 import { COMBUSTIBLES } from "../esquemas/motorEsquemas.js";
 import {
@@ -32,10 +38,10 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
     setFeedbackAccion("Vehículo eliminado del inventario (DELETE).");
   });
 
-  // Map (Tema 2) para localizar la marca de cada coche sin bucles anidados
+  // Estructura Map para cruzar marcaId con el nombre de la marca en tiempo constante sin bucles anidados.
   const mapaMarcas = new Map(marcas.map((m) => [m.id, m]));
 
-  // Estado derivado calculado durante el render (Tema 3: "You Might Not Need an Effect")
+  // Estado derivado calculado directamente durante el render, sin useEffect ni estado redundante.
   const termino = busqueda.trim().toUpperCase();
   const cochesFiltrados = coches.filter((c) => {
     const nombreMarca = mapaMarcas.get(c.marcaId)?.nombre ?? "";
@@ -46,6 +52,7 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
   });
 
   function ajustarPrecio(coche, factor) {
+    // Manejadores de eventos que disparan las mutaciones PATCH (-5% / +5%) y DELETE limpiando el feedback previo.
     setFeedbackAccion("");
     const nuevoPrecio = Math.max(1000, Math.round(coche.precio * factor));
     patchPrecioMut.mutate({ id: coche.id, precio: nuevoPrecio });
@@ -96,6 +103,7 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
         </div>
       </div>
 
+      {/* Gestión explícita de los estados de carga, error (incluido el error del BONUS de Zod) y estado vacío. */}
       {(patchPrecioMut.isError || borrarMut.isError) && (
         <p role="alert" className="banner-error">
           {patchPrecioMut.error?.message ?? borrarMut.error?.message}

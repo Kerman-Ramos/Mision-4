@@ -1,3 +1,9 @@
+/* ============================================================================
+   3. ARCHIVO: src/hooks/useMotorData.js
+   PROPÓSITO: Hooks personalizados que encapsulan TanStack Query v5 (caché,
+   dedupe, estados e invalidación) para mantener los componentes limpios.
+   ============================================================================ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   obtenerMarcas,
@@ -15,6 +21,7 @@ import {
 
 /* ==================== QUERIES (GET) ==================== */
 
+// Queries (GET) indexadas por queryKey. Al cambiar un parámetro de la key (ej. simularCorrupto), Query lanza una nueva petición automáticamente.
 export function useMarcas() {
   return useQuery({
     queryKey: ["marcas"],
@@ -42,6 +49,7 @@ export function usePropietarios() {
 
 /* ==================== MUTATIONS (POST, PUT, PATCH, DELETE) ==================== */
 
+// Mutaciones (POST/PUT/PATCH) que al completarse ejecutan invalidateQueries() para refrescar la caché y sincronizar la UI con el servidor.
 export function useCambiarEstadoMarca() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -85,6 +93,7 @@ export function useActualizarPrecioCoche(onExito) {
   });
 }
 
+// Mutación DELETE que invalida tanto ["coches"] como ["propietarios"] para mantener coherencia relacional en pantalla.
 export function useEliminarCoche(onExito) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -97,6 +106,7 @@ export function useEliminarCoche(onExito) {
   });
 }
 
+// Mutaciones CRUD sobre /propietarios con invalidación automática de la clave ["propietarios"].
 export function useCrearPropietario(onExito) {
   const queryClient = useQueryClient();
   return useMutation({

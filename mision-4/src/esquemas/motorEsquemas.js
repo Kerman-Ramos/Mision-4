@@ -1,3 +1,9 @@
+/* ============================================================================
+   1. ARCHIVO: src/esquemas/motorEsquemas.js
+   PROPÓSITO: Única fuente de verdad para validar tanto los formularios del
+   cliente como las respuestas del API.
+   ============================================================================ */
+
 import { z } from "zod";
 
 const ANIO_ACTUAL = new Date().getFullYear();
@@ -6,6 +12,7 @@ export const COMBUSTIBLES = ["Híbrido", "Gasolina", "Diésel", "Eléctrico"];
 
 // Funciones puras de validación (Temas 1 y 2: split, map, Number.isNaN, new Date)
 function esFechaISOValida(texto) {
+  // Valida manualmente el formato YYYY-MM-DD y rangos básicos de mes/día usando funciones puras de JS.
   const partes = texto.split("-");
   if (partes.length !== 3) return false;
 
@@ -25,6 +32,7 @@ function esFechaISOValida(texto) {
 }
 
 function esFechaNoFutura(texto) {
+  // Comprueba que la fecha de compra introducida no sea posterior al día actual.
   const [anio, mes, dia] = texto.split("-").map(Number);
   const fechaCompra = new Date(anio, mes - 1, dia);
   return fechaCompra <= new Date();
@@ -34,6 +42,7 @@ function esFechaNoFutura(texto) {
    1. ESQUEMAS DE RESPUESTA DEL API (para validar con safeParse en servicios)
    ============================================================================ */
 
+// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
 export const marcaApiSchema = z.object({
   id: z.number().int().min(1),
   nombre: z.string().min(1, "Nombre de marca vacío"),
@@ -49,6 +58,7 @@ export const marcaApiSchema = z.object({
 
 export const listaMarcasSchema = z.array(marcaApiSchema);
 
+// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
 export const cocheApiSchema = z.object({
   id: z.number().int().min(1),
   marcaId: z.number().int().min(1),
@@ -66,6 +76,7 @@ export const cocheApiSchema = z.object({
 
 export const listaCochesSchema = z.array(cocheApiSchema);
 
+// Esquemas de contrato del API: definen la estructura exacta que debe devolver json-server para evitar datos corruptos en la UI.
 export const propietarioApiSchema = z.object({
   id: z.number().int().min(1),
   nombre: z.string().min(2),
@@ -83,6 +94,7 @@ export const listaPropietariosSchema = z.array(propietarioApiSchema);
    2. ESQUEMAS DE FORMULARIO (conectados a React Hook Form con zodResolver)
    ============================================================================ */
 
+// Esquema del formulario de vehículos: convierte strings de inputs HTML a números con z.coerce.number() y aplica validaciones cruzadas con .refine().
 export const cocheFormSchema = z
   .object({
     marcaId: z.coerce
@@ -117,17 +129,17 @@ export const cocheFormSchema = z
       error: "Debes confirmar que los datos técnicos son veraces",
     }),
   })
-  // Validación cruzada 1: coherencia entre combustible y año
+  // Reglas de negocio cruzadas: impiden incoherencias entre combustible/año (eléctricos >= 2012) y año/precio (recientes >= 10.000 €).
   .refine((datos) => !(datos.combustible === "Eléctrico" && datos.anio < 2012), {
     error: "Un vehículo eléctrico moderno debe ser de 2012 o posterior",
     path: ["anio"],
   })
-  // Validación cruzada 2: coherencia entre año reciente y precio
   .refine((datos) => !(datos.anio >= 2023 && datos.precio < 10000), {
     error: "Un vehículo de 2023 o posterior no puede costar menos de 10000 €",
     path: ["precio"],
   });
 
+// Esquema del formulario de propietarios: valida formato de email (z.email), nombre compuesto, ID de vehículo y fecha de compra no futura.
 export const propietarioFormSchema = z
   .object({
     nombre: z

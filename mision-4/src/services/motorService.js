@@ -1,3 +1,9 @@
+/* ============================================================================
+   2. ARCHIVO: src/services/motorService.js
+   PROPÓSITO: Capa de servicios HTTP que aísla todas las llamadas fetch y
+   valida las respuestas del servidor.
+   ============================================================================ */
+
 import {
   listaMarcasSchema,
   marcaApiSchema,
@@ -7,8 +13,10 @@ import {
   propietarioApiSchema,
 } from "../esquemas/motorEsquemas.js";
 
+// Lee la URL base desde variables de entorno de Vite (VITE_API_URL) para no escribir URLs fijas en el código.
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
+// Wrapper sobre fetch: añade cabecera JSON y comprueba respuesta.ok manualmente, ya que fetch no rechaza la promesa en errores HTTP 4xx/5xx.
 async function peticion(endpoint, opciones = {}) {
   const respuesta = await fetch(`${API_URL}${endpoint}`, {
     headers: { "Content-Type": "application/json" },
@@ -24,7 +32,7 @@ async function peticion(endpoint, opciones = {}) {
   return respuesta.json();
 }
 
-// BONUS: valida la respuesta del API con safeParse para atrapar datos corruptos
+// BONUS: Aduana de entrada con Zod (safeParse). Si el API devuelve un dato que rompe el esquema, lanza un error descriptivo antes de renderizar.
 function validarRespuesta(esquema, datos, origen) {
   const resultado = esquema.safeParse(datos);
   if (!resultado.success) {
@@ -37,6 +45,7 @@ function validarRespuesta(esquema, datos, origen) {
   return resultado.data;
 }
 
+// Operaciones GET y PATCH sobre el recurso /marcas.
 /* ==================== MARCAS (GET + PATCH) ==================== */
 
 export async function obtenerMarcas() {
@@ -52,7 +61,9 @@ export async function cambiarEstadoMarca({ id, activa }) {
   return validarRespuesta(marcaApiSchema, json, `PATCH /marcas/${id}`);
 }
 
+// Operación GET sobre /coches. Si simularCorrupto está activo, inyecta un registro con datos inválidos para demostrar que safeParse lo intercepta.
 /* ============ COCHES (GET + POST + PUT + PATCH + DELETE) ============ */
+// Operaciones CRUD de escritura sobre /coches: POST (crear), PUT (reemplazo completo), PATCH (ajuste parcial de precio) y DELETE (borrar).
 
 export async function obtenerCoches(simularCorrupto = false) {
   const json = await peticion("/coches");
@@ -105,6 +116,7 @@ export async function eliminarCoche(id) {
 }
 
 /* =========== PROPIETARIOS (GET + POST + PUT + DELETE) =========== */
+// Operaciones CRUD (GET, POST, PUT, DELETE) sobre el recurso /propietarios.
 
 export async function obtenerPropietarios() {
   const json = await peticion("/propietarios");
