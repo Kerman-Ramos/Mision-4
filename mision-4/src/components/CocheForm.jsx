@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cocheFormSchema, COMBUSTIBLES } from "./../esquemas/motorEsquemas.js";
+import { cocheFormSchema, COMBUSTIBLES } from "../esquemas/motorEsquemas.js";
 import {
 	useMarcas,
 	useCrearCoche,
 	useReemplazarCoche,
-} from "./../hooks/useMotorData.js";
+} from "../hooks/useMotorData.js";
 
 const VALORES_INICIALES = {
 	marcaId: "",

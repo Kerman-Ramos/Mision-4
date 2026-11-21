@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { COMBUSTIBLES } from "./../esquemas/motorEsquemas.js";
+import { COMBUSTIBLES } from "../esquemas/motorEsquemas.js";
 import {
   useCoches,
   useMarcas,
   useActualizarPrecioCoche,
   useEliminarCoche,
-} from "./../hooks/useMotorData.js";
+} from "../hooks/useMotorData.js";
 
 export default function CocheList({ simularCorrupto, onEditarCoche }) {
   const {

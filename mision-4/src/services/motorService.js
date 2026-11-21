@@ -5,7 +5,7 @@ import {
   cocheApiSchema,
   listaPropietariosSchema,
   propietarioApiSchema,
-} from "./../esquemas/motorEsquemas.js";
+} from "../esquemas/motorEsquemas.js";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 

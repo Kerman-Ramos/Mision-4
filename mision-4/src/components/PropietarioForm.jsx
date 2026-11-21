@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { propietarioFormSchema } from "./../esquemas/motorEsquemas.js";
+import { propietarioFormSchema } from "../esquemas/motorEsquemas.js";
 import {
   useCoches,
   useMarcas,
   useCrearPropietario,
   useReemplazarPropietario,
-} from "./../hooks/useMotorData.js";
+} from "../hooks/useMotorData.js";
 
 const VALORES_INICIALES = {
   nombre: "",
