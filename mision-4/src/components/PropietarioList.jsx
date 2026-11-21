@@ -4,12 +4,15 @@ import {
   useCoches,
   useMarcas,
   useEliminarPropietario,
-} from "../hooks/useMotorData.js";
+} from "../hooks/useMotorData";
 
 export default function PropietarioList({ onEditarPropietario }) {
   const { data: propietarios = [], isPending, isError, error } = usePropietarios();
   const { data: coches = [] } = useCoches(false);
   const { data: marcas = [] } = useMarcas();
+
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCiudad, setFiltroCiudad] = useState("Todas");
   const [feedback, setFeedback] = useState("");
 
   const borrarMut = useEliminarPropietario(() => {
@@ -19,6 +22,23 @@ export default function PropietarioList({ onEditarPropietario }) {
   const mapaCoches = new Map(coches.map((c) => [c.id, c]));
   const mapaMarcas = new Map(marcas.map((m) => [m.id, m.nombre]));
 
+  // Ciudades únicas ordenadas (Tema 2: Set + toSorted inmutable)
+  const ciudades = [...new Set(propietarios.map((p) => p.ciudad))].toSorted();
+
+  // Filtro derivado en render (Tema 3: sin estado redundante ni useEffect)
+  const termino = busqueda.trim().toUpperCase();
+  const propietariosFiltrados = propietarios.filter((p) => {
+    const coche = mapaCoches.get(p.cocheId);
+    const marca = coche ? mapaMarcas.get(coche.marcaId) ?? "" : "";
+    const modelo = coche ? coche.modelo : "";
+
+    const coincideCiudad =
+      filtroCiudad === "Todas" || p.ciudad === filtroCiudad;
+    const texto = `${p.nombre} ${p.email} ${p.ciudad} ${marca} ${modelo}`.toUpperCase();
+
+    return coincideCiudad && texto.includes(termino);
+  });
+
   function borrarPropietario(id) {
     setFeedback("");
     borrarMut.mutate(id);
@@ -26,7 +46,38 @@ export default function PropietarioList({ onEditarPropietario }) {
 
   return (
     <section className="card">
-      <h2>Propietarios registrados ({propietarios.length})</h2>
+      <h2>Propietarios registrados ({propietariosFiltrados.length})</h2>
+
+      <div className="filters-bar">
+        <div className="field">
+          <label htmlFor="filtro-prop-busqueda">
+            Buscar por nombre, email o vehículo
+          </label>
+          <input
+            id="filtro-prop-busqueda"
+            type="text"
+            placeholder="Ej: Laura, @example.com, Corolla"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="filtro-prop-ciudad">Filtrar por ciudad</label>
+          <select
+            id="filtro-prop-ciudad"
+            value={filtroCiudad}
+            onChange={(e) => setFiltroCiudad(e.target.value)}
+          >
+            <option value="Todas">Todas</option>
+            {ciudades.map((ciudad) => (
+              <option key={ciudad} value={ciudad}>
+                {ciudad}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {borrarMut.isError && (
         <p role="alert" className="banner-error">
@@ -51,13 +102,15 @@ export default function PropietarioList({ onEditarPropietario }) {
         </p>
       )}
 
-      {!isPending && !isError && propietarios.length === 0 && (
-        <p className="state-box">Aún no hay propietarios registrados.</p>
+      {!isPending && !isError && propietariosFiltrados.length === 0 && (
+        <p className="state-box">
+          No hay propietarios que coincidan con los filtros actuales.
+        </p>
       )}
 
-      {!isPending && !isError && propietarios.length > 0 && (
+      {!isPending && !isError && propietariosFiltrados.length > 0 && (
         <ul className="items-grid">
-          {propietarios.map((p) => {
+          {propietariosFiltrados.map((p) => {
             const coche = mapaCoches.get(p.cocheId);
             const marca = coche ? mapaMarcas.get(coche.marcaId) : null;
 
