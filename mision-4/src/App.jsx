@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMarcas, useCambiarEstadoMarca } from "./hooks/useMotorData";
-import CocheForm from "./components/CocheForm";
-import CocheList from "./components/CocheList";
-import PropietarioForm from "./components/PropietarioForm";
-import PropietarioList from "./components/PropietarioList";
+import { useMarcas, useCambiarEstadoMarca } from "./hooks/useMotorData.js";
+import CocheForm from "./components/CocheForm.jsx";
+import CocheList from "./components/CocheList.jsx";
+import PropietarioForm from "./components/PropietarioForm.jsx";
+import PropietarioList from "./components/PropietarioList.jsx";
 
 export default function App() {
   const [pestana, setPestana] = useState("coches");

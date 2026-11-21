@@ -4,7 +4,7 @@ import {
   useCoches,
   useMarcas,
   useEliminarPropietario,
-} from "../hooks/useMotorData";
+} from "./../hooks/useMotorData.js";
 
 export default function PropietarioList({ onEditarPropietario }) {
   const { data: propietarios = [], isPending, isError, error } = usePropietarios();

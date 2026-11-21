@@ -11,7 +11,7 @@ import {
   crearPropietario,
   reemplazarPropietario,
   eliminarPropietario,
-} from "../services/motorService";
+} from "./../services/motorService.js";
 
 /* ==================== QUERIES (GET) ==================== */
 
