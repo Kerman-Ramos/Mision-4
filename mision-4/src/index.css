@@ -97,19 +97,6 @@ select {
 	font: inherit;
 }
 
-button {
-	transition:
-		transform 160ms ease,
-		background 160ms ease,
-		border-color 160ms ease,
-		box-shadow 160ms ease,
-		color 160ms ease;
-}
-
-button:not(:disabled):hover {
-	transform: translateY(-2px);
-}
-
 :focus-visible {
 	outline: 3px solid var(--focus);
 	outline-offset: 3px;
