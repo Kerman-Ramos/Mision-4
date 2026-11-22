@@ -449,7 +449,7 @@ select {
 	background: rgba(5, 17, 29, 0.36);
 }
 
-.radio-fieldset[aria-invalid="true"] {
+.radio-fieldset:has([aria-invalid="true"]) {
 	border-color: var(--danger);
 }
 
@@ -486,10 +486,6 @@ select {
 	color: var(--primary-dark);
 	background: var(--primary-soft);
 	font-weight: 800;
-}
-
-.radio-fieldset:has([aria-invalid="true"]) {
-	border-color: var(--danger);
 }
 
 .radio-option input,
