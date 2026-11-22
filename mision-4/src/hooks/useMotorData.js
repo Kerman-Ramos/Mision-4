@@ -1,13 +1,20 @@
-// Trae las 3 piezas clave de TanStack Query:
-// - useQuery: para LEER datos (GET).
-// - useMutation: para MODIFICAR datos (POST, PUT, PATCH, DELETE).
-// - useQueryClient: acceso al almacén de caché para avisarle cuándo debe refrescar.
+/* ============================================================================
+   3. ARCHIVO: src/hooks/useMotorData.js
+   PROPÓSITO: Hooks personalizados de TanStack Query v5 que encapsulan la
+   lectura con caché (useQuery) y la escritura con invalidación (useMutation).
+   ============================================================================ */
+
+// Importa los 3 hooks principales de TanStack Query v5 para leer, mutar e invalidar caché.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// Trae las 14 funciones del mensajero (motorService.js).
+// Importa todas las funciones HTTP de la capa de servicios.
 import {
 	obtenerMarcas,
+	crearMarca,
+	reemplazarMarca,
 	cambiarEstadoMarca,
+	eliminarMarca,
 	obtenerCoches,
+	probarDatoCorrupto,
 	crearCoche,
 	reemplazarCoche,
 	actualizarPrecioCoche,
@@ -16,17 +23,11 @@ import {
 	crearPropietario,
 	reemplazarPropietario,
 	eliminarPropietario,
-	crearMarca,
-	reemplazarMarca,
-	eliminarMarca,
 } from "../services/motorService.js";
 
-// --- Queries (Leer datos con caché) ---
-// Llama a useQuery con:
-// - queryKey: ["marcas"] -> Etiqueta única en la caché para guardar estas marcas.
-// - queryFn: obtenerMarcas -> Función que hace el GET.
-// - staleTime: 60000 -> Durante 60.000 ms (1 minuto) los datos se consideran "frescos"
-// y no vuelve a pedirlos innecesariamente.
+// --- QUERIES (lectura de datos con caché compartida) ---
+
+// Lee /marcas bajo la clave ["marcas"] y mantiene los datos frescos durante 60 segundos.
 export function useMarcas() {
 	return useQuery({
 		queryKey: ["marcas"],
@@ -35,19 +36,29 @@ export function useMarcas() {
 	});
 }
 
-// Igual que useMarcas, pero la etiqueta incluye simularCorrupto: ["coches", false]
-// o ["coches", true]. Cuando el usuario marca la casilla, la etiqueta cambia y
-// TanStack Query hace automáticamente una nueva petición con el valor nuevo.
-export function useCoches(simularCorrupto = false) {
+// Lee los vehículos reales bajo la clave única ["coches"], compartida entre todas las pestañas.
+export function useCoches() {
 	return useQuery({
-
-		queryKey: ["coches", simularCorrupto],
-		queryFn: () => obtenerCoches(simularCorrupto),
+		queryKey: ["coches"],
+		queryFn: obtenerCoches,
 		staleTime: 30000,
 	});
 }
 
-// Lee /propietarios bajo la etiqueta ["propietarios"] (frescos 30 segundos).
+// Query aislada para el interruptor demo del BONUS:
+// - queryKey independiente ["demo-corrupto"] para no contaminar la caché real de coches.
+// - enabled: activo hace que solo se dispare cuando el usuario marca la casilla.
+// - retry: false evita reintentos automáticos y muestra el error de Zod al instante.
+export function useDemoDatoCorrupto(activo) {
+	return useQuery({
+		queryKey: ["demo-corrupto"],
+		queryFn: probarDatoCorrupto,
+		enabled: activo,
+		retry: false,
+	});
+}
+
+// Lee /propietarios bajo la clave ["propietarios"] con 30 segundos de frescura.
 export function usePropietarios() {
 	return useQuery({
 		queryKey: ["propietarios"],
@@ -56,12 +67,9 @@ export function usePropietarios() {
 	});
 }
 
-// --- Mutations (Escribir datos y refrescar la caché) ---
-// const queryClient = useQueryClient(): agarra el controlador de caché.
-// -> useMutation({ mutationFn: cambiarEstadoMarca, onSuccess: ... }):
-// Cuando el PATCH sale bien (onSuccess), ejecuta
-// queryClient.invalidateQueries({ queryKey: ["marcas"] }), que significa:
-// "Oye caché, las marcas cambiaron; vuelve a pedirlas para actualizar la pantalla".
+// --- MUTATIONS (escritura en servidor e invalidación de caché) ---
+
+// PATCH de marca: al completarse, invalida ["marcas"] para refrescar chips y formularios.
 export function useCambiarEstadoMarca() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -72,8 +80,46 @@ export function useCambiarEstadoMarca() {
 	});
 }
 
-// Ejecuta crearCoche (POST). Si sale bien, invalida ["coches"] para que el coche
-// nuevo aparezca en la lista y, si el formulario pasó un aviso (onExito), lo ejecuta.
+// POST de marca: invalida ["marcas"] y ejecuta el callback onExito del formulario.
+export function useCrearMarca(onExito) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: crearMarca,
+		onSuccess: (creada) => {
+			queryClient.invalidateQueries({ queryKey: ["marcas"] });
+			if (onExito) onExito(creada);
+		},
+	});
+}
+
+// PUT de marca: invalida ["marcas"] y notifica al formulario mediante onExito.
+export function useReemplazarMarca(onExito) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: reemplazarMarca,
+		onSuccess: (editada) => {
+			queryClient.invalidateQueries({ queryKey: ["marcas"] });
+			if (onExito) onExito(editada);
+		},
+	});
+}
+
+// DELETE de marca: invalida las 3 colecciones (marcas -> coches -> propietarios)
+// para garantizar coherencia relacional en toda la interfaz.
+export function useEliminarMarca(onExito) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: eliminarMarca,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["marcas"] });
+			queryClient.invalidateQueries({ queryKey: ["coches"] });
+			queryClient.invalidateQueries({ queryKey: ["propietarios"] });
+			if (onExito) onExito();
+		},
+	});
+}
+
+// POST de coche: invalida ["coches"] para mostrar el alta en el listado y resetea el formulario.
 export function useCrearCoche(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -85,7 +131,7 @@ export function useCrearCoche(onExito) {
 	});
 }
 
-// Ejecuta reemplazarCoche (PUT), invalida ["coches"] y avisa con onExito.
+// PUT de coche: invalida ["coches"] y avisa al formulario tras guardar el reemplazo completo.
 export function useReemplazarCoche(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -97,7 +143,7 @@ export function useReemplazarCoche(onExito) {
 	});
 }
 
-// Ejecuta actualizarPrecioCoche (PATCH), invalida ["coches"] y avisa con onExito.
+// PATCH de precio de coche: invalida ["coches"] y actualiza el mensaje de feedback.
 export function useActualizarPrecioCoche(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -109,9 +155,7 @@ export function useActualizarPrecioCoche(onExito) {
 	});
 }
 
-
-// Ejecuta eliminarCoche (DELETE). Invalida ["coches"] Y TAMBIÉN ["propietarios"]
-// porque si borras un coche, el propietario que lo tenía debe reflejar "Vehículo eliminado".
+// DELETE de coche: invalida ["coches"] y ["propietarios"] para actualizar referencias de vehículos borrados.
 export function useEliminarCoche(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -124,8 +168,7 @@ export function useEliminarCoche(onExito) {
 	});
 }
 
-
-// POST de propietario + invalida ["propietarios"] + llama a onExito.
+// POST de propietario: invalida ["propietarios"] y ejecuta onExito.
 export function useCrearPropietario(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -137,7 +180,7 @@ export function useCrearPropietario(onExito) {
 	});
 }
 
-// PUT de propietario + invalida ["propietarios"] + llama a onExito.
+// PUT de propietario: invalida ["propietarios"] y ejecuta onExito.
 export function useReemplazarPropietario(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -149,50 +192,13 @@ export function useReemplazarPropietario(onExito) {
 	});
 }
 
-// DELETE de propietario + invalida ["propietarios"] + llama a onExito.
+// DELETE de propietario: invalida ["propietarios"] y ejecuta onExito.
 export function useEliminarPropietario(onExito) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: eliminarPropietario,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["propietarios"] });
-			if (onExito) onExito();
-		},
-	});
-}
-
-// POST de marca + invalida ["marcas"] + llama a onExito.
-export function useCrearMarca(onExito) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: crearMarca,
-		onSuccess: (creada) => {
-			queryClient.invalidateQueries({ queryKey: ["marcas"] });
-			if (onExito) onExito(creada);
-		},
-	});
-}
-
-// PUT de marca + invalida ["marcas"] + llama a onExito.
-export function useReemplazarMarca(onExito) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: reemplazarMarca,
-		onSuccess: (editada) => {
-			queryClient.invalidateQueries({ queryKey: ["marcas"] });
-			if (onExito) onExito(editada);
-		},
-	});
-}
-
-// DELETE de marca + invalida ["marcas"] y ["coches"] + llama a onExito.
-export function useEliminarMarca(onExito) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: eliminarMarca,
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["marcas"] });
-			queryClient.invalidateQueries({ queryKey: ["coches"] });
 			if (onExito) onExito();
 		},
 	});
