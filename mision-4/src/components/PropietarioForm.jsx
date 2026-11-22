@@ -1,15 +1,17 @@
 /* ============================================================================
-	  8. ARCHIVO: src/components/PropietarioForm.jsx
-	  PROPÓSITO: Formulario accesible con React Hook Form + Zod para registrar
-	  (POST) o editar (PUT) propietarios vinculados a un vehículo del inventario.
-	  ============================================================================ */
+   8. ARCHIVO: src/components/PropietarioForm.jsx
+   PROPÓSITO: Formulario accesible con React Hook Form + Zod para registrar
+   (POST) o editar (PUT) propietarios vinculados a un vehículo del inventario.
+   ============================================================================ */
 
-// Importa hooks de React, React Hook Form, zodResolver, propietarioFormSchema
-// y los hooks de TanStack Query (useCoches, useMarcas, crear y reemplazar propietario).
-import { useEffect, useState } from "react";
+// Importa useEffect para sincronizar el formulario al recibir propietarioEditando.
+import { useEffect } from "react";
+// Importa React Hook Form y el conector de esquemas Zod.
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+// Importa el esquema de validación de propietarios (con .trim() y z.iso.date()).
 import { propietarioFormSchema } from "../esquemas/motorEsquemas.js";
+// Importa los hooks de lectura de caché y mutaciones de propietarios.
 import {
 	useCoches,
 	useMarcas,
@@ -17,7 +19,7 @@ import {
 	useReemplazarPropietario,
 } from "../hooks/useMotorData.js";
 
-// VALORES_INICIALES con los 5 campos vacíos.
+// Plantilla limpia para inicializar o vaciar el formulario.
 const VALORES_INICIALES = {
 	nombre: "",
 	email: "",
@@ -26,19 +28,21 @@ const VALORES_INICIALES = {
 	fechaCompra: "",
 };
 
-// Declara PropietarioForm, obtiene coches y marcas de caché, crea mensajeExito y
-// construye mapaMarcas (new Map) para mostrar "Toyota Corolla (2022)" en el desplegable.
 export default function PropietarioForm({
 	propietarioEditando,
+	mensajeExito,
+	onMensajeExito,
 	onCancelarEdicion,
+	onEdicionCompletada,
 }) {
-	const { data: coches = [] } = useCoches(false);
+	// Lee coches y marcas desde la caché compartida (claves ["coches"] y ["marcas"]).
+	const { data: coches = [] } = useCoches();
 	const { data: marcas = [] } = useMarcas();
-	const [mensajeExito, setMensajeExito] = useState("");
 
+	// Crea un Map para mostrar el nombre de la marca junto al modelo en el <select> de vehículos.
 	const mapaMarcas = new Map(marcas.map((m) => [m.id, m.nombre]));
 
-	// Configura useForm con propietarioFormSchema y VALORES_INICIALES.
+	// Conecta React Hook Form con propietarioFormSchema.
 	const {
 		register,
 		handleSubmit,
@@ -50,23 +54,22 @@ export default function PropietarioForm({
 		defaultValues: VALORES_INICIALES,
 	});
 
-	// Configura crearMut (POST), editarMut (PUT), esEdicion y mutacionActiva.
+	// Mutación POST: muestra aviso verde y limpia el formulario.
 	const crearMut = useCrearPropietario((creado) => {
-		setMensajeExito(`Propietario "${creado.nombre}" registrado (POST).`);
+		onMensajeExito(`Propietario "${creado.nombre}" registrado (POST).`);
 		reset(VALORES_INICIALES);
 	});
 
+	// Mutación PUT: muestra aviso verde y sale del modo edición conservando la confirmación.
 	const editarMut = useReemplazarPropietario((editado) => {
-		setMensajeExito(`Propietario "${editado.nombre}" actualizado (PUT).`);
-		onCancelarEdicion();
+		onMensajeExito(`Propietario "${editado.nombre}" actualizado (PUT).`);
+		onEdicionCompletada();
 	});
 
 	const esEdicion = Boolean(propietarioEditando);
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
-
-	// useEffect: si llega propietarioEditando, rellena los 5 campos con reset() (pasando
-	// cocheId a texto para el <select>) y mueve el foco a "nombre".
+	// Precarga los datos del propietario al editar y lleva el foco al campo "nombre".
 	useEffect(() => {
 		if (propietarioEditando) {
 			reset({
@@ -82,42 +85,31 @@ export default function PropietarioForm({
 		}
 	}, [propietarioEditando, reset, setFocus]);
 
-	// onSubmit(datosValidados): copia todos los datos validados (...datosValidados),
-	// limpia espacios de nombre y ciudad, y ejecuta PUT o POST según esEdicion.
+	// Envía los datos ya validados y normalizados (.trim() aplicado por Zod) al servidor.
 	function onSubmit(datosValidados) {
-
-		setMensajeExito("");
-		const payload = {
-			...datosValidados,
-			nombre: datosValidados.nombre.trim(),
-			ciudad: datosValidados.ciudad.trim(),
-		};
+		onMensajeExito("");
 
 		if (esEdicion) {
-			editarMut.mutate({ id: propietarioEditando.id, datos: payload });
+			editarMut.mutate({
+				id: propietarioEditando.id,
+				datos: datosValidados,
+			});
 		} else {
-			crearMut.mutate(payload);
+			crearMut.mutate(datosValidados);
 		}
 	}
 
-// onInvalid(errores): enfoca el primer campo con fallo.
-
+	// Dirige el foco al primer campo erróneo si falla la validación.
 	function onInvalid(errores) {
 		const camposConError = Object.keys(errores);
 		if (camposConError.length > 0) {
 			setFocus(camposConError[0]);
 		}
 	}
-// Renderiza el formulario accesible con:
-// - Nombre completo (autoComplete="name")
-// - Correo electrónico (type="email", autoComplete="email")
-// - Ciudad (type="text")
-// - Vehículo adquirido (<select> que lista todos los coches con su marca y año)
-// - Fecha de compra (type="date", abre el calendario del navegador)
-// - Botón submit (deshabilitado en isPending) y carteles de error/éxito.
 
 	return (
 		<section className="card">
+			{/* Cabecera dinámica con opción de cancelar edición. */}
 			<div className="card-header">
 				<h2>
 					{esEdicion
@@ -137,6 +129,7 @@ export default function PropietarioForm({
 
 			<form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
 				<div className="form-grid">
+					{/* Campo 1: Nombre completo (exige nombre y apellido). */}
 					<div className="field">
 						<label htmlFor="prop-nombre">Nombre completo</label>
 						<input
@@ -145,16 +138,23 @@ export default function PropietarioForm({
 							autoComplete="name"
 							placeholder="Ej: Laura Martínez"
 							aria-invalid={!!errors.nombre}
-							aria-describedby={errors.nombre ? "error-prop-nombre" : undefined}
+							aria-describedby={
+								errors.nombre ? "error-prop-nombre" : undefined
+							}
 							{...register("nombre")}
 						/>
 						{errors.nombre && (
-							<p id="error-prop-nombre" role="alert" className="field-error">
+							<p
+								id="error-prop-nombre"
+								role="alert"
+								className="field-error"
+							>
 								{errors.nombre.message}
 							</p>
 						)}
 					</div>
 
+					{/* Campo 2: Correo electrónico validado con z.email(). */}
 					<div className="field">
 						<label htmlFor="prop-email">Correo electrónico</label>
 						<input
@@ -163,16 +163,23 @@ export default function PropietarioForm({
 							autoComplete="email"
 							placeholder="nombre@ejemplo.com"
 							aria-invalid={!!errors.email}
-							aria-describedby={errors.email ? "error-prop-email" : undefined}
+							aria-describedby={
+								errors.email ? "error-prop-email" : undefined
+							}
 							{...register("email")}
 						/>
 						{errors.email && (
-							<p id="error-prop-email" role="alert" className="field-error">
+							<p
+								id="error-prop-email"
+								role="alert"
+								className="field-error"
+							>
 								{errors.email.message}
 							</p>
 						)}
 					</div>
 
+					{/* Campo 3: Ciudad de residencia. */}
 					<div className="field">
 						<label htmlFor="prop-ciudad">Ciudad</label>
 						<input
@@ -180,38 +187,55 @@ export default function PropietarioForm({
 							type="text"
 							placeholder="Ej: Madrid"
 							aria-invalid={!!errors.ciudad}
-							aria-describedby={errors.ciudad ? "error-prop-ciudad" : undefined}
+							aria-describedby={
+								errors.ciudad ? "error-prop-ciudad" : undefined
+							}
 							{...register("ciudad")}
 						/>
 						{errors.ciudad && (
-							<p id="error-prop-ciudad" role="alert" className="field-error">
+							<p
+								id="error-prop-ciudad"
+								role="alert"
+								className="field-error"
+							>
 								{errors.ciudad.message}
 							</p>
 						)}
 					</div>
 
+					{/* Campo 4: Desplegable de vehículos cruzados con su marca. */}
 					<div className="field">
 						<label htmlFor="prop-coche">Vehículo adquirido</label>
 						<select
 							id="prop-coche"
 							aria-invalid={!!errors.cocheId}
-							aria-describedby={errors.cocheId ? "error-prop-cocheId" : undefined}
+							aria-describedby={
+								errors.cocheId
+									? "error-prop-cocheId"
+									: undefined
+							}
 							{...register("cocheId")}
 						>
 							<option value="">Selecciona un vehículo</option>
 							{coches.map((c) => (
 								<option key={c.id} value={c.id}>
-									{mapaMarcas.get(c.marcaId) ?? "Marca"} {c.modelo} ({c.anio})
+									{mapaMarcas.get(c.marcaId) ?? "Marca"}{" "}
+									{c.modelo} ({c.anio})
 								</option>
 							))}
 						</select>
 						{errors.cocheId && (
-							<p id="error-prop-cocheId" role="alert" className="field-error">
+							<p
+								id="error-prop-cocheId"
+								role="alert"
+								className="field-error"
+							>
 								{errors.cocheId.message}
 							</p>
 						)}
 					</div>
 
+					{/* Campo 5: Fecha de compra validada por calendario real (z.iso.date) y regla no futura. */}
 					<div className="field">
 						<label htmlFor="prop-fecha">Fecha de compra</label>
 						<input
@@ -219,18 +243,25 @@ export default function PropietarioForm({
 							type="date"
 							aria-invalid={!!errors.fechaCompra}
 							aria-describedby={
-								errors.fechaCompra ? "error-prop-fecha" : undefined
+								errors.fechaCompra
+									? "error-prop-fecha"
+									: undefined
 							}
 							{...register("fechaCompra")}
 						/>
 						{errors.fechaCompra && (
-							<p id="error-prop-fecha" role="alert" className="field-error">
+							<p
+								id="error-prop-fecha"
+								role="alert"
+								className="field-error"
+							>
 								{errors.fechaCompra.message}
 							</p>
 						)}
 					</div>
 				</div>
 
+				{/* Botón de envío bloqueado únicamente mientras la mutación está en curso. */}
 				<div className="form-actions">
 					<button
 						type="submit"
@@ -240,11 +271,12 @@ export default function PropietarioForm({
 						{mutacionActiva.isPending
 							? "Guardando..."
 							: esEdicion
-							? "Guardar propietario (PUT)"
-							: "Registrar propietario (POST)"}
+							  ? "Guardar propietario (PUT)"
+							  : "Registrar propietario (POST)"}
 					</button>
 				</div>
 
+				{/* Banners accesibles de error de servidor y confirmación. */}
 				{mutacionActiva.isError && (
 					<p role="alert" className="banner-error">
 						{mutacionActiva.error.message}

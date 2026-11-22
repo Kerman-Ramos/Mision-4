@@ -1,13 +1,14 @@
 /* ============================================================================
-	  7. ARCHIVO: src/components/CocheList.jsx
-	  PROPÓSITO: Listado de vehículos (GET) con filtros locales y acciones rápidas
-	  de edición (PUT), ajuste de precio (PATCH) y borrado (DELETE).
-	  ============================================================================ */
+   7. ARCHIVO: src/components/CocheList.jsx
+   PROPÓSITO: Listado de vehículos (GET) con filtros locales derivados en render,
+   confirmación de borrado (DELETE), ajuste de precio (PATCH) y reintento.
+   ============================================================================ */
 
-// Importa useState, COMBUSTIBLES y los hooks de datos (useCoches, useMarcas,
-// useActualizarPrecioCoche y useEliminarCoche).
+// Importa useState para los filtros locales y el aviso de acciones rápidas.
 import { useState } from "react";
+// Importa la lista oficial de combustibles para generar el desplegable de filtro.
 import { COMBUSTIBLES } from "../esquemas/motorEsquemas.js";
+// Importa los hooks de TanStack Query para leer coches/marcas y ejecutar PATCH/DELETE.
 import {
 	useCoches,
 	useMarcas,
@@ -15,55 +16,42 @@ import {
 	useEliminarCoche,
 } from "../hooks/useMotorData.js";
 
-// Recibe si el BONUS está activo y la función para mandar un coche al formulario de edición.
-export default function CocheList({ simularCorrupto, onEditarCoche }) {
-	// Pide los coches a TanStack Query y saca sus estados:
-	// - coches: la lista (o [] si aún no llegó).
-	// - isPending: true en la primera carga (no hay datos todavía).
-	// - isError / error: true y el detalle si falló la red o saltó el BONUS de Zod.
-	// - isFetching: true siempre que hay una petición en curso (incluido refresco silencioso).
+export default function CocheList({ onEditarCoche }) {
+	// Lee los vehículos reales desde la caché compartida ["coches"] junto con refetch() para reintentar fallos.
 	const {
 		data: coches = [],
 		isPending,
 		isError,
 		error,
 		isFetching,
-	} = useCoches(simularCorrupto);
+		refetch,
+	} = useCoches();
 
-	// Lee las marcas (ya están en caché, así que no hace petición duplicada).
+	// Lee el catálogo de marcas desde la caché compartida sin duplicar peticiones.
 	const { data: marcas = [] } = useMarcas();
 
-	// Crea 3 variables de memoria local: filtroCombustible ("Todos"), busqueda ("")
-	// y feedbackAccion ("" para avisar cuando un PATCH o DELETE termina).
+	// Estados locales mínimos: filtro por combustible, texto de búsqueda y feedback de acciones rápidas.
 	const [filtroCombustible, setFiltroCombustible] = useState("Todos");
 	const [busqueda, setBusqueda] = useState("");
 	const [feedbackAccion, setFeedbackAccion] = useState("");
 
-	// Prepara el PATCH de precio y su mensaje verde.
+	// Mutación PATCH para subir o bajar el precio un 5%.
 	const patchPrecioMut = useActualizarPrecioCoche((cocheEditado) => {
 		setFeedbackAccion(
 			`Precio de "${cocheEditado.modelo}" actualizado a ${cocheEditado.precio} € (PATCH).`
 		);
 	});
 
-	// Prepara el DELETE y su mensaje verde.
+	// Mutación DELETE para eliminar un vehículo del inventario.
 	const borrarMut = useEliminarCoche(() => {
 		setFeedbackAccion("Vehículo eliminado del inventario (DELETE).");
 	});
 
-
-	// Crea un "diccionario rápido" (Map) donde buscas por id de marca (ej. 1) y obtienes
-	// al instante el objeto Toyota completo sin tener que recorrer toda la lista cada vez.
+	// Diccionario Map para consultar la marca de cada coche en tiempo constante O(1).
 	const mapaMarcas = new Map(marcas.map((m) => [m.id, m]));
 
-
-	// Limpia espacios del buscador y lo pasa a MAYÚSCULAS para buscar sin que importen mayúsculas/minúsculas.
+	// Estado derivado calculado directamente en el render (sin useEffect ni copias en estado).
 	const termino = busqueda.trim().toUpperCase();
-	// Filtra la lista directamente al pintar (sin guardar copias en estado):
-	// 1. Busca el nombre de la marca usando mapaMarcas.get(c.marcaId)?.nombre ?? "".
-	// 2. Comprueba si el combustible coincide (o si está seleccionado "Todos").
-	// 3. Junta marca + modelo + año en mayúsculas y comprueba si contiene (.includes) el texto buscado.
-	// 4. Solo deja pasar los coches que cumplan ambas condiciones.
 	const cochesFiltrados = coches.filter((c) => {
 		const nombreMarca = mapaMarcas.get(c.marcaId)?.nombre ?? "";
 		const coincideCombustible =
@@ -72,41 +60,46 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 		return coincideCombustible && texto.includes(termino);
 	});
 
-	// Limpia avisos previos, multiplica el precio por 0.95 (-5%) o 1.05 (+5%), lo redondea
-	// con Math.round y garantiza con Math.max(1000, ...) que nunca baje de 1000 €.
-	// Luego lanza la petición PATCH con patchPrecioMut.mutate().
+	// Calcula el nuevo precio respetando el mínimo de 1.000 € y lanza la petición PATCH.
 	function ajustarPrecio(coche, factor) {
-
 		setFeedbackAccion("");
 		const nuevoPrecio = Math.max(1000, Math.round(coche.precio * factor));
 		patchPrecioMut.mutate({ id: coche.id, precio: nuevoPrecio });
 	}
 
-	// Limpia avisos previos y lanza DELETE con borrarMut.mutate(id).
-	function borrarCoche(id) {
+	// Pide confirmación explícita antes de ejecutar la operación destructiva DELETE.
+	function borrarCoche(coche) {
+		if (
+			!window.confirm(
+				`¿Seguro que quieres eliminar el vehículo "${coche.modelo}"?`
+			)
+		) {
+			return;
+		}
 		setFeedbackAccion("");
-		borrarMut.mutate(id);
+		borrarMut.mutate(coche.id);
 	}
 
-	// Cabecera con el contador dinámico ({cochesFiltrados.length}) y un texto azul
-	// "Refrescando en segundo plano..." si isFetching es true después de la primera carga.
 	return (
 		<section className="card">
+			{/* Cabecera con contador dinámico de resultados y aviso de refresco en segundo plano. */}
 			<div className="card-header">
 				<div>
 					<h2>Inventario de vehículos ({cochesFiltrados.length})</h2>
 					{isFetching && !isPending && (
-						<span className="badge-sync">Refrescando en segundo plano...</span>
+						<span className="badge-sync">
+							Refrescando en segundo plano...
+						</span>
 					)}
 				</div>
 			</div>
 
+			{/* Barra de filtros controlados (texto libre y desplegable de combustible). */}
 			<div className="filters-bar">
-				{/* Barra de filtros con dos inputs controlados: */}
-				{/* - Caja de búsqueda ligada a busqueda / setBusqueda. */}
-				{/* - Desplegable de combustible ligado a filtroCombustible / setFiltroCombustible. */}
 				<div className="field">
-					<label htmlFor="filtro-busqueda">Buscar por marca, modelo o año</label>
+					<label htmlFor="filtro-busqueda">
+						Buscar por marca, modelo o año
+					</label>
 					<input
 						id="filtro-busqueda"
 						type="text"
@@ -117,7 +110,9 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 				</div>
 
 				<div className="field">
-					<label htmlFor="filtro-combustible">Filtrar por combustible</label>
+					<label htmlFor="filtro-combustible">
+						Filtrar por combustible
+					</label>
 					<select
 						id="filtro-combustible"
 						value={filtroCombustible}
@@ -133,8 +128,7 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 				</div>
 			</div>
 
-			{/* Carteles de error o éxito de las acciones rápidas (PATCH / DELETE). */}
-
+			{/* Avisos de error o éxito de las acciones rápidas (PATCH / DELETE). */}
 			{(patchPrecioMut.isError || borrarMut.isError) && (
 				<p role="alert" className="banner-error">
 					{patchPrecioMut.error?.message ?? borrarMut.error?.message}
@@ -145,33 +139,38 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 					{feedbackAccion}
 				</p>
 			)}
-			{/* muestra "Cargando vehículos desde el API...". */}
 
+			{/* Estado de carga inicial. */}
 			{isPending && (
 				<p role="status" className="state-box">
 					Cargando vehículos desde el API...
 				</p>
 			)}
-			{/* muestra el cartel rojo con error.message (aquí aparece el */}
-			{/* mensaje exacto del BONUS de Zod cuando activas el dato corrupto). */}
 
+			{/* Estado de error con botón Reintentar conectado a refetch(). */}
 			{isError && (
 				<div role="alert" className="banner-error">
 					<strong>Error al cargar vehículos:</strong> {error.message}
+					<div className="form-actions" style={{ marginTop: "10px" }}>
+						<button
+							type="button"
+							className="btn-secondary"
+							onClick={() => refetch()}
+						>
+							Reintentar
+						</button>
+					</div>
 				</div>
 			)}
-			{/* muestra "No hay vehículos...". */}
 
+			{/* Estado vacío cuando ningún vehículo cumple los filtros actuales. */}
 			{!isPending && !isError && cochesFiltrados.length === 0 && (
 				<p className="state-box">
 					No hay vehículos que coincidan con los filtros actuales.
 				</p>
 			)}
-					{/* Para cada coche crea un <li key={coche.id}> con: */}
-					{/* - Marca y país (o "Marca #X" si se borró la marca). */}
-					{/* - Modelo, año, etiqueta de combustible y precio en €. */}
-					{/* - 4 botones: "Editar (PUT)" (avisa a App), "-5% (PATCH)", "+5% (PATCH)" y "Borrar (DELETE)". */}
 
+			{/* Rejilla de tarjetas de vehículos con acciones PUT, PATCH (-5% / +5%) y DELETE. */}
 			{!isPending && !isError && cochesFiltrados.length > 0 && (
 				<ul className="items-grid">
 					{cochesFiltrados.map((coche) => {
@@ -187,10 +186,14 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 										</span>
 										<h3>
 											{coche.modelo}{" "}
-											<span className="muted">({coche.anio})</span>
+											<span className="muted">
+												({coche.anio})
+											</span>
 										</h3>
 									</div>
-									<span className="badge">{coche.combustible}</span>
+									<span className="badge">
+										{coche.combustible}
+									</span>
 								</div>
 
 								<p className="price">{coche.precio} €</p>
@@ -199,7 +202,10 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 									<button
 										type="button"
 										className="btn-secondary"
-										onClick={() => onEditarCoche(coche)}
+										onClick={() => {
+											setFeedbackAccion("");
+											onEditarCoche(coche);
+										}}
 									>
 										Editar (PUT)
 									</button>
@@ -207,7 +213,9 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 										type="button"
 										className="btn-ghost"
 										disabled={patchPrecioMut.isPending}
-										onClick={() => ajustarPrecio(coche, 0.95)}
+										onClick={() =>
+											ajustarPrecio(coche, 0.95)
+										}
 									>
 										-5% (PATCH)
 									</button>
@@ -215,7 +223,9 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 										type="button"
 										className="btn-ghost"
 										disabled={patchPrecioMut.isPending}
-										onClick={() => ajustarPrecio(coche, 1.05)}
+										onClick={() =>
+											ajustarPrecio(coche, 1.05)
+										}
 									>
 										+5% (PATCH)
 									</button>
@@ -223,7 +233,7 @@ export default function CocheList({ simularCorrupto, onEditarCoche }) {
 										type="button"
 										className="btn-danger"
 										disabled={borrarMut.isPending}
-										onClick={() => borrarCoche(coche.id)}
+										onClick={() => borrarCoche(coche)}
 									>
 										Borrar (DELETE)
 									</button>

@@ -4,19 +4,21 @@
    gestiona tanto el alta (POST) como la edición completa (PUT) de vehículos.
    ============================================================================ */
 
-// Importa useEffect, useState, useForm, zodResolver, las reglas cocheFormSchema,
-// la lista COMBUSTIBLES y los hooks useMarcas, useCrearCoche y useReemplazarCoche.
-import { useEffect, useState } from "react";
+// Importa useEffect para sincronizar el formulario al cambiar cocheEditando.
+import { useEffect } from "react";
+// Importa React Hook Form y el conector oficial de esquemas Zod.
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+// Importa las reglas de validación y el catálogo de combustibles.
 import { cocheFormSchema, COMBUSTIBLES } from "../esquemas/motorEsquemas.js";
+// Importa los hooks de TanStack Query para leer marcas y mutar vehículos.
 import {
 	useMarcas,
 	useCrearCoche,
 	useReemplazarCoche,
 } from "../hooks/useMotorData.js";
 
-// Plantilla limpia para cuando el formulario está vacío o acaba de enviarse.
+// Valores por defecto para inicializar o vaciar el formulario.
 const VALORES_INICIALES = {
 	marcaId: "",
 	modelo: "",
@@ -26,14 +28,17 @@ const VALORES_INICIALES = {
 	confirmaVeracidad: false,
 };
 
-// Recibe el coche a editar (o null si estamos creando) y la función para salir de edición.
-export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
-	// Pide las marcas para rellenar el desplegable y guarda si aún están cargando.
+export default function CocheForm({
+	cocheEditando,
+	mensajeExito,
+	onMensajeExito,
+	onCancelarEdicion,
+	onEdicionCompletada,
+}) {
+	// Obtiene la lista de marcas para poblar el desplegable <select>.
 	const { data: marcas = [], isPending: cargandoMarcas } = useMarcas();
-	// Guarda el texto verde de confirmación ("Vehículo registrado...").
-	const [mensajeExito, setMensajeExito] = useState("");
 
-	// Conecta el formulario con las reglas de Zod (incluidas las reglas cruzadas).
+	// Inicializa React Hook Form conectado al esquema cocheFormSchema.
 	const {
 		register,
 		handleSubmit,
@@ -41,34 +46,28 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		setFocus,
 		formState: { errors },
 	} = useForm({
-
 		resolver: zodResolver(cocheFormSchema),
 		defaultValues: VALORES_INICIALES,
 	});
 
-	// Prepara el POST: cuando el servidor confirme que se guardó, muestra el mensaje
-	// verde y vacía el formulario con reset(VALORES_INICIALES).
+	// Mutación POST: al guardar con éxito muestra el aviso verde y resetea los campos.
 	const crearMut = useCrearCoche((cocheCreado) => {
-		setMensajeExito(`Vehículo "${cocheCreado.modelo}" registrado (POST).`);
+		onMensajeExito(`Vehículo "${cocheCreado.modelo}" registrado (POST).`);
 		reset(VALORES_INICIALES);
 	});
 
-	// Prepara el PUT: cuando termine, muestra mensaje verde y llama a onCancelarEdicion().
+	// Mutación PUT: al actualizar muestra el aviso verde y sale del modo edición sin borrar el mensaje.
 	const editarMut = useReemplazarCoche((cocheActualizado) => {
-		setMensajeExito(`Vehículo "${cocheActualizado.modelo}" actualizado (PUT).`);
-		onCancelarEdicion();
+		onMensajeExito(`Vehículo "${cocheActualizado.modelo}" actualizado (PUT).`);
+		onEdicionCompletada();
 	});
 
-	// Verdadero (true) si hay un coche en edición; falso (false) si estamos creando uno nuevo.
+	// Determina si el formulario opera en modo edición (PUT) o creación (POST).
 	const esEdicion = Boolean(cocheEditando);
-	// Elige qué mutación vigilar (para saber si está enviando o si dio error).
+	// Selecciona la mutación activa para leer su estado isPending e isError.
 	const mutacionActiva = esEdicion ? editarMut : crearMut;
 
-
-	// Vigila la prop cocheEditando. Cada vez que el usuario pulsa "Editar (PUT)" en
-	// una tarjeta, rellena automáticamente todas las cajas con reset({...}) convirtiendo
-	// marcaId a texto para que el <select> lo marque, deja el checkbox en false para
-	// volver a confirmar y pone el cursor en "modelo". Si se cancela, limpia todo.
+	// Precarga los valores del coche seleccionado en el formulario y enfoca el campo "modelo".
 	useEffect(() => {
 		if (cocheEditando) {
 			reset({
@@ -85,17 +84,13 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		}
 	}, [cocheEditando, reset, setFocus]);
 
+	// Solo se ejecuta cuando Zod aprueba todos los campos (incluyendo .trim() y validaciones cruzadas).
 	function onSubmit(datosValidados) {
-// Borra mensajeExito anterior.
-// -> Crea el objeto "payload" SOLO con los 5 campos que existen en db.json (dejando
-// fuera confirmaVeracidad, que era solo una casilla de validación en pantalla) y
-// quitando espacios al modelo con .trim().
-// -> Si esEdicion es true dispara editarMut.mutate (PUT); si no, crearMut.mutate (POST).
-
-		setMensajeExito("");
+		onMensajeExito("");
+		// Construye el payload excluyendo confirmaVeracidad (campo exclusivo de validación en UI).
 		const payload = {
 			marcaId: datosValidados.marcaId,
-			modelo: datosValidados.modelo.trim(),
+			modelo: datosValidados.modelo,
 			anio: datosValidados.anio,
 			combustible: datosValidados.combustible,
 			precio: datosValidados.precio,
@@ -108,9 +103,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 		}
 	}
 
-
+	// Si falla la validación al enviar, dirige automáticamente el foco al primer campo con error.
 	function onInvalid(errores) {
-		// Si Zod detecta errores, mueve el cursor al primer campo erróneo.
 		const camposConError = Object.keys(errores);
 		if (camposConError.length > 0) {
 			setFocus(camposConError[0]);
@@ -118,9 +112,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 	}
 
 	return (
-		// Cabecera de la tarjeta: cambia el título entre "Editar vehículo #X (PUT)" y
-		// "Registrar nuevo vehículo (POST)". Si está editando, muestra el botón "Cancelar edición".
 		<section className="card">
+			{/* Cabecera dinámica con botón para cancelar la edición cuando corresponda. */}
 			<div className="card-header">
 				<h2>
 					{esEdicion
@@ -138,14 +131,11 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				)}
 			</div>
 
-
+			{/* noValidate desactiva los avisos nativos del navegador para que mande siempre Zod. */}
 			<form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
 				<div className="form-grid">
+					{/* Campo 1: Marca (deshabilita visualmente las marcas inactivas). */}
 					<div className="field">
-						{/* Se deshabilita mientras cargandoMarcas es true. */}
-						{/* -> Con marcas.map() pinta cada marca como <option>. Si una marca tiene activa === false, */}
-						{/* le añade disabled={!m.activa} y el texto "— Inactiva" para que no puedas elegirla. */}
-						{/* -> Si hay error (errors.marcaId), lo muestra en <p role="alert">. */}
 						<label htmlFor="coche-marca">Marca</label>
 						<select
 							id="coche-marca"
@@ -183,9 +173,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 						)}
 					</div>
 
+					{/* Campo 2: Modelo (texto normalizado automáticamente por Zod con .trim()). */}
 					<div className="field">
 						<label htmlFor="coche-modelo">Modelo</label>
-						{/* Campo 2 (Modelo): <input type="text"> con {...register("modelo")} y su error accesible. */}
 						<input
 							id="coche-modelo"
 							type="text"
@@ -207,9 +197,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 						)}
 					</div>
 
+					{/* Campo 3: Año de fabricación (convertido a número por z.coerce.number()). */}
 					<div className="field">
 						<label htmlFor="coche-anio">Año de fabricación</label>
-						{/* Campo 3 (Año): <input type="number"> con {...register("anio")} y su error accesible. */}
 						<input
 							id="coche-anio"
 							type="number"
@@ -230,9 +220,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 						)}
 					</div>
 
+					{/* Campo 4: Precio en euros (sujeto a rango y regla cruzada con el año). */}
 					<div className="field">
 						<label htmlFor="coche-precio">Precio (€)</label>
-						{/* Campo 4 (Precio): <input type="number"> con {...register("precio")} y su error accesible. */}
 						<input
 							id="coche-precio"
 							type="number"
@@ -255,21 +245,19 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 					</div>
 				</div>
 
-				{/* Envuelve los 4 botones de radio dentro de <fieldset> con su título <legend>. */}
-				{/* Regla de accesibilidad para agrupar opciones relacionadas. */}
-				{/* Recorre COMBUSTIBLES con .map() creando un <input type="radio"> para cada uno. */}
-				{/* Todos quedan registrados bajo el mismo nombre "combustible". */}
-				<fieldset
-					className="radio-fieldset"
-					aria-invalid={!!errors.combustible}
-					aria-describedby={
-						errors.combustible
-							? "error-combustible"
-							: undefined
-					}
-				>
+				{/* Campo 5: Combustible. El <fieldset> aporta el <legend> y el div interno con role="radiogroup" lleva aria-invalid y aria-describedby. */}
+				<fieldset className="radio-fieldset">
 					<legend>Tipo de combustible</legend>
-					<div className="radio-group">
+					<div
+						className="radio-group"
+						role="radiogroup"
+						aria-invalid={!!errors.combustible}
+						aria-describedby={
+							errors.combustible
+								? "error-combustible"
+								: undefined
+						}
+					>
 						{COMBUSTIBLES.map((tipo) => (
 							<label key={tipo} className="radio-option">
 								<input
@@ -292,10 +280,9 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 					)}
 				</fieldset>
 
+				{/* Campo 6: Casilla obligatoria validada con z.literal(true). */}
 				<div className="field checkbox-field">
 					<label htmlFor="coche-confirma" className="checkbox-label">
-						{/* Campo 6 (Confirmación): <input type="checkbox"> conectado a "confirmaVeracidad". */}
-						{/* Su mensaje de error aparece debajo si intentan enviar sin marcarlo. */}
 						<input
 							id="coche-confirma"
 							type="checkbox"
@@ -323,9 +310,8 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 					)}
 				</div>
 
+				{/* Botón de envío: solo se deshabilita mientras la petición está en curso (isPending). */}
 				<div className="form-actions">
-					{/* disabled={mutacionActiva.isPending}: solo se bloquea mientras viaja la petición. */}
-					{/* Evita que un doble clic cree el coche dos veces y cambia el texto dinámicamente. */}
 					<button
 						type="submit"
 						className="btn-primary"
@@ -341,6 +327,7 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 					</button>
 				</div>
 
+				{/* Regiones vivas ARIA para anunciar errores del servidor (alert) o confirmaciones (status). */}
 				{mutacionActiva.isError && (
 					<p role="alert" className="banner-error">
 						{mutacionActiva.error.message}
@@ -348,9 +335,6 @@ export default function CocheForm({ cocheEditando, onCancelarEdicion }) {
 				)}
 				{mensajeExito && (
 					<p role="status" className="banner-success">
-						{/* Si mutacionActiva.isError es true: cartel rojo con role="alert". */}
-						{/* -> Si mensajeExito tiene texto: cartel verde con role="status" (los lectores de */}
-						{/* pantalla lo anuncian amablemente al terminar de hablar). */}
 						{mensajeExito}
 					</p>
 				)}
